@@ -1,5 +1,4 @@
-import { HighLevel } from '@gohighlevel/api-client';
-
+// Using direct fetch for Opportunities API
 export default async function handler(req, res) {
   // Enable CORS for your domain
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -24,18 +23,22 @@ export default async function handler(req, res) {
       });
     }
 
-    // Initialize GoHighLevel SDK
-    const ghl = new HighLevel({
-      privateIntegrationToken: privateToken
+    // Test Opportunities API directly
+    const response = await fetch(`https://services.leadconnectorhq.com/opportunities/search?location_id=${locationId}&limit=5`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${privateToken}`,
+        'Version': '2021-07-28',
+        'Content-Type': 'application/json'
+      }
     });
 
-    // Test Opportunities API
-    const opportunities = await ghl.opportunities.search({
-      location_id: locationId,
-      limit: 5
-    });
+    if (!response.ok) {
+      throw new Error(`API request failed: ${response.status} ${await response.text()}`);
+    }
 
-    const opportunityCount = opportunities.opportunities ? opportunities.opportunities.length : 0;
+    const data = await response.json();
+    const opportunityCount = data.opportunities ? data.opportunities.length : 0;
 
     res.status(200).json({
       success: true,
@@ -43,7 +46,7 @@ export default async function handler(req, res) {
       data: {
         opportunityCount,
         locationId,
-        endpoint: 'opportunities.search',
+        endpoint: '/opportunities/search',
         scopes: ['View Opportunities ✓']
       }
     });

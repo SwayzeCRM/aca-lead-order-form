@@ -8,9 +8,7 @@
     "build": "echo 'Static site - no build needed'",
     "deploy": "vercel --prod"
   },
-  "dependencies": {
-    "@gohighlevel/api-client": "^1.0.0"
-  },
+  "dependencies": {},
   "devDependencies": {
     "vercel": "^32.0.0"
   },
