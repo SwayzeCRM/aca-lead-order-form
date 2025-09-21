@@ -840,19 +840,11 @@
                         </div>
                     </div>
 
-                    <!-- Continue Button (appears after selection) -->
-                    <div id="continueButtonContainer" style="display: none; margin-top: 24px; text-align: center;">
-                        <button type="button" id="continueButton" class="action-btn" style="background: #2980b9; color: white; padding: 12px 32px; border: none; border-radius: 4px; font-size: 16px; cursor: pointer;">
+                    <!-- Continue Button - Always visible, enabled after selection -->
+                    <div id="continueButtonContainer" style="margin-top: 32px; text-align: center; padding: 20px; background: #f8f9fa; border-radius: 8px; border: 2px solid #e9ecef;">
+                        <p id="continueInstructions" style="margin: 0 0 16px 0; color: #6c757d; font-size: 14px;">Please select an order type above, then click continue</p>
+                        <button type="button" id="continueButton" style="background: #2980b9; color: white; padding: 16px 40px; border: none; border-radius: 6px; font-size: 18px; font-weight: 600; cursor: pointer; opacity: 0.5;" disabled>
                             Continue to Form →
-                        </button>
-                    </div>
-
-                    <!-- DEBUG: Show button always visible for testing -->
-                    <div id="debugButton" style="margin-top: 24px; text-align: center; background: #f39c12; padding: 12px; border-radius: 4px;">
-                        <strong>DEBUG:</strong> If you can see this orange box, HTML is loading correctly. Continue button should appear above when you select Individual or Agency.
-                        <br><br>
-                        <button type="button" onclick="document.getElementById('continueButtonContainer').style.display='block'; alert('Debug: Manually showing continue button')" style="background: #e74c3c; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer;">
-                            Manual Test: Show Continue Button
                         </button>
                     </div>
                 </div>
@@ -1142,7 +1134,6 @@
 
         // Initialize app
         document.addEventListener('DOMContentLoaded', async function() {
-            alert('DEBUG: JavaScript is running! Check console for order type logic messages.');
             await initializeAuth();
             await loadFormData();
             initializePurchasingForLogic();
@@ -1192,9 +1183,12 @@
             orderTypeRadios.forEach(radio => {
                 radio.addEventListener('change', function() {
                     console.log('Order type changed to:', this.value);
-                    // Show continue button when any option is selected
-                    continueButtonContainer.style.display = 'block';
-                    console.log('Continue button shown');
+                    // Enable continue button when any option is selected
+                    continueButton.disabled = false;
+                    continueButton.style.opacity = '1';
+                    continueButton.style.cursor = 'pointer';
+                    document.getElementById('continueInstructions').textContent = 'Click continue to proceed to the form';
+                    console.log('Continue button enabled');
 
                     // Hide all form sections initially
                     individualForm.classList.remove('active');
@@ -1224,7 +1218,7 @@
                 const activeForm = selectedOrderType.value === 'individual' ? individualForm : agencyForm;
                 activeForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-                // Hide the continue button after clicking
+                // Hide the continue button container after clicking
                 continueButtonContainer.style.display = 'none';
             });
         }
