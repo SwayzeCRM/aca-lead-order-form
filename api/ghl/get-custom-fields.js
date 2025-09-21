@@ -23,8 +23,8 @@ export default async function handler(req, res) {
       });
     }
 
-    // Get custom fields from GoHighLevel - using location-based endpoint like tags
-    const url = `https://services.leadconnectorhq.com/locations/${locationId}/customFields`;
+    // Get custom fields from GoHighLevel - using correct endpoint with contact model
+    const url = `https://services.leadconnectorhq.com/locations/${locationId}/customFields?model=contact`;
     const headers = {
       'Authorization': `Bearer ${privateToken}`,
       'Version': '2021-07-28',
@@ -64,8 +64,8 @@ export default async function handler(req, res) {
     // Log the response for debugging
     console.log('Custom Fields API response:', data);
 
-    // Handle different possible response structures
-    const customFields = data.customFields || data.fields || data || [];
+    // Handle response structure based on API documentation
+    const customFields = data.customFields || [];
 
     res.status(200).json({
       success: true,
