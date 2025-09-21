@@ -1382,13 +1382,121 @@
             }
         }
 
+        // Auto-login functions (copied from index.html)
+        async function handleAutoLogin(email, locationId) {
+            try {
+                console.log('Attempting auto-login for:', email, locationId);
+
+                // Check if user exists
+                const { data: userData, error: userError } = await supabase
+                    .from('users')
+                    .select('*')
+                    .eq('email', email)
+                    .eq('location_id', locationId)
+                    .single();
+
+                console.log('User lookup result:', userData, userError);
+
+                if (userError && userError.code !== 'PGRST116') {
+                    console.error('Database error:', userError);
+                    throw userError;
+                }
+
+                if (userData) {
+                    console.log('User exists, signing in...');
+                    // User exists, sign them in
+                    const { data, error } = await supabase.auth.signInWithPassword({
+                        email: email,
+                        password: locationId
+                    });
+
+                    if (error) {
+                        console.error('Sign in error:', error);
+                        throw error;
+                    }
+
+                    currentUser = userData;
+                    console.log('Auto-login successful, user set:', currentUser);
+                    return true;
+                } else {
+                    console.log('User does not exist, creating account...');
+                    // User doesn't exist, create account
+                    await createUserAccount(email, locationId);
+                    return true;
+                }
+            } catch (error) {
+                console.error('Auto-login failed:', error);
+                alert('Auto-login failed: ' + error.message + '. Please check browser console.');
+                return false;
+            }
+        }
+
+        async function createUserAccount(email, locationId) {
+            try {
+                console.log('Creating account for:', email);
+
+                // Create auth user
+                const { data: authData, error: authError } = await supabase.auth.signUp({
+                    email: email,
+                    password: locationId
+                });
+
+                console.log('Auth signup result:', authData, authError);
+
+                if (authError) {
+                    console.log('Auth signup error:', authError);
+                    throw authError;
+                }
+
+                // Create user record
+                const { data: userData, error: userError } = await supabase
+                    .from('users')
+                    .insert({
+                        id: authData.user.id,
+                        email: email,
+                        location_id: locationId,
+                        role: 'user',
+                        is_active: true
+                    })
+                    .select()
+                    .single();
+
+                if (userError) {
+                    console.error('User creation error:', userError);
+                    throw userError;
+                }
+
+                currentUser = userData;
+                console.log('Account created successfully:', currentUser);
+
+            } catch (error) {
+                console.error('Account creation failed:', error);
+                alert('Account creation failed: ' + error.message);
+                throw error;
+            }
+        }
+
         async function initializeAuth() {
             console.log('=== INIT AUTH DEBUG v2025.01.21-16:45 ===');
             // Check for impersonation mode first
             const urlParams = new URLSearchParams(window.location.search);
+            let email = urlParams.get('email');
+            const locationId = urlParams.get('location_id');
             const impersonateUserId = urlParams.get('impersonate');
             const adminId = urlParams.get('admin');
             const pendingImpersonation = localStorage.getItem('pendingImpersonation');
+
+            // Clean up email parameter - remove any trailing } characters
+            if (email) {
+                email = email.replace(/[}]+$/, '').trim();
+                console.log('Cleaned email parameter:', email);
+            }
+
+            // If we have email and location parameters, try auto-login
+            if (email && locationId) {
+                console.log('Auto-login detected with email:', email, 'location:', locationId);
+                return await handleAutoLogin(email, locationId);
+            }
 
             // If we're in impersonation mode, handle authentication differently
             if ((impersonateUserId && adminId) || pendingImpersonation) {
