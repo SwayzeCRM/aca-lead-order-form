@@ -23,8 +23,8 @@ export default async function handler(req, res) {
       });
     }
 
-    // Get custom fields from GoHighLevel - using the contacts custom fields endpoint
-    const response = await fetch(`https://services.leadconnectorhq.com/custom-fields/?objectKey=contact&locationId=${locationId}`, {
+    // Get custom fields from GoHighLevel - using location-based endpoint like tags
+    const response = await fetch(`https://services.leadconnectorhq.com/locations/${locationId}/customFields`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${privateToken}`,

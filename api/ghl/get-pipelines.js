@@ -23,8 +23,8 @@ export default async function handler(req, res) {
       });
     }
 
-    // Get pipelines from GoHighLevel - using the opportunities pipeline endpoint
-    const response = await fetch(`https://services.leadconnectorhq.com/pipelines/?locationId=${locationId}`, {
+    // Get pipelines from GoHighLevel - using location-based endpoint like tags
+    const response = await fetch(`https://services.leadconnectorhq.com/locations/${locationId}/pipelines`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${privateToken}`,
