@@ -24,8 +24,8 @@ export default async function handler(req, res) {
       });
     }
 
-    // Test Tags API directly (SDK method unclear)
-    const response = await fetch(`https://services.leadconnectorhq.com/tags/?locationId=${locationId}`, {
+    // Test Tags API directly - using Sub-Account tags endpoint
+    const response = await fetch(`https://services.leadconnectorhq.com/locations/${locationId}/tags`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${privateToken}`,
@@ -47,7 +47,7 @@ export default async function handler(req, res) {
       data: {
         tagCount,
         locationId,
-        endpoint: '/tags/',
+        endpoint: '/locations/{locationId}/tags',
         scopes: ['View Tags ✓', 'Edit Tags ✓']
       }
     });
