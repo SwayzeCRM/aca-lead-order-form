@@ -1429,17 +1429,17 @@
 
         async function loadFormData() {
             console.log('=== LOAD FORM DATA DEBUG v2025.01.21-16:45 ===');
-            const urlParams = new URLSearchParams(window.location.search);
+            const formUrlParams = new URLSearchParams(window.location.search);
 
             // Handle repeat order
-            const repeatOrderId = urlParams.get('repeat');
+            const repeatOrderId = formUrlParams.get('repeat');
             if (repeatOrderId) {
                 await loadRepeatOrder(repeatOrderId);
                 return;
             }
 
             // Handle modify order
-            const modifyOrderId = urlParams.get('modify');
+            const modifyOrderId = formUrlParams.get('modify');
             if (modifyOrderId) {
                 await loadModifyOrder(modifyOrderId);
                 return;
