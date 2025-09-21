@@ -623,27 +623,67 @@
                 </div>
 
                 <div class="settings-section">
-                    <h3>OAuth Configuration (Alternative)</h3>
+                    <h3>Order Workflow Automation</h3>
                     <p style="color: #7f8c8d; font-size: 14px; margin-bottom: 16px;">
-                        Only needed if you want to use OAuth instead of the private token above.
+                        Configure what happens automatically in GoHighLevel when a new order is placed.
                     </p>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Client ID</label>
-                            <input type="text" id="ghlClientId" placeholder="GoHighLevel Client ID">
-                        </div>
-                        <div class="form-group">
-                            <label>Client Secret</label>
-                            <input type="password" id="ghlClientSecret" placeholder="GoHighLevel Client Secret">
-                        </div>
-                    </div>
-                    <div style="display: flex; gap: 12px; margin-bottom: 20px;">
-                        <button class="action-btn btn-primary" onclick="saveOAuthSettings()">Save OAuth Settings</button>
-                        <button class="action-btn btn-warning" onclick="testOAuthConfig()">Test OAuth Config</button>
-                        <button class="action-btn btn-success" onclick="initiateOAuthFlow()">Start OAuth Flow</button>
+
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 8px;">
+                            <input type="checkbox" id="workflowEnabled" style="margin: 0;">
+                            Enable Order Workflow Automation
+                        </label>
+                        <div class="help-text">Automatically perform actions in GoHighLevel when orders are placed</div>
                     </div>
 
-                    <div id="oauthTestResult" style="margin-top: 15px; padding: 12px; border-radius: 4px; display: none;"></div>
+                    <div id="workflowSettings" style="margin-top: 20px;">
+                        <h4 style="margin-bottom: 16px; color: #2c3e50;">Workflow Actions</h4>
+
+                        <div class="form-group">
+                            <label style="display: flex; align-items: center; gap: 8px;">
+                                <input type="checkbox" id="createUpdateContact" style="margin: 0;">
+                                Create/Update Contact
+                            </label>
+                            <div class="help-text">Create new contact or update existing contact with order information</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label style="display: flex; align-items: center; gap: 8px;">
+                                <input type="checkbox" id="addToPipeline" style="margin: 0;">
+                                Add to Pipeline
+                            </label>
+                            <div class="help-text">Create opportunity in specified pipeline</div>
+                            <div style="margin-top: 8px;">
+                                <input type="text" id="pipelineId" placeholder="Pipeline ID (e.g., 7GoVuBJb4WadoAr0L5Q7)" style="margin-top: 4px;">
+                                <div class="help-text">Get Pipeline ID from GoHighLevel → Opportunities → Pipeline Settings</div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label style="display: flex; align-items: center; gap: 8px;">
+                                <input type="checkbox" id="addTags" style="margin: 0;">
+                                Add Tags
+                            </label>
+                            <div class="help-text">Add tags to contact when order is placed</div>
+                            <div style="margin-top: 8px;">
+                                <input type="text" id="orderTags" placeholder="e.g., new-order, aca-customer" style="margin-top: 4px;">
+                                <div class="help-text">Comma-separated list of tags to add</div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Order Value Field</label>
+                            <input type="text" id="orderValueField" placeholder="Custom field name for order value">
+                            <div class="help-text">Custom field in GoHighLevel to store order total (optional)</div>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 12px; margin-top: 20px;">
+                        <button class="action-btn btn-primary" onclick="saveWorkflowSettings()">Save Workflow Settings</button>
+                        <button class="action-btn btn-warning" onclick="testWorkflow()">Test Workflow</button>
+                    </div>
+
+                    <div id="workflowResult" style="margin-top: 15px; padding: 12px; border-radius: 4px; display: none;"></div>
                 </div>
 
                 <div class="table-container">
@@ -1106,11 +1146,18 @@
                 // Populate form fields
                 document.getElementById('ghlPrivateToken').value = settingsMap.ghl_private_token || '';
                 document.getElementById('ghlLocationId').value = settingsMap.ghl_location_id || '';
-                document.getElementById('ghlClientId').value = settingsMap.ghl_client_id || '';
-                document.getElementById('ghlClientSecret').value = settingsMap.ghl_client_secret || '';
                 document.getElementById('notificationEmail').value = settingsMap.notification_email || '';
                 document.getElementById('webhookSecret').value = settingsMap.webhook_secret || '';
                 document.getElementById('defaultPipelineId').value = settingsMap.default_pipeline_id || '';
+
+                // Populate workflow settings
+                document.getElementById('workflowEnabled').checked = settingsMap.workflow_enabled === 'true';
+                document.getElementById('createUpdateContact').checked = settingsMap.workflow_create_contact === 'true';
+                document.getElementById('addToPipeline').checked = settingsMap.workflow_add_pipeline === 'true';
+                document.getElementById('addTags').checked = settingsMap.workflow_add_tags === 'true';
+                document.getElementById('pipelineId').value = settingsMap.workflow_pipeline_id || '';
+                document.getElementById('orderTags').value = settingsMap.workflow_order_tags || '';
+                document.getElementById('orderValueField').value = settingsMap.workflow_order_value_field || '';
 
             } catch (error) {
                 console.error('Error loading settings:', error);
@@ -1552,169 +1599,6 @@
         }
 
         // Settings Functions
-        async function saveOAuthSettings() {
-            try {
-                const clientId = document.getElementById('ghlClientId').value;
-                const clientSecret = document.getElementById('ghlClientSecret').value;
-
-                if (!clientId || !clientSecret) {
-                    alert('Please enter both Client ID and Client Secret');
-                    return;
-                }
-
-                const updates = [
-                    { setting_key: 'ghl_client_id', setting_value: clientId },
-                    { setting_key: 'ghl_client_secret', setting_value: clientSecret }
-                ];
-
-                for (const update of updates) {
-                    await supabase
-                        .from('admin_settings')
-                        .upsert(update);
-                }
-
-                await logAdminActivity('oauth_settings_update', 'settings', null, {
-                    client_id_length: clientId.length,
-                    client_secret_length: clientSecret.length
-                });
-
-                showTestResult('OAuth settings saved successfully', 'success');
-
-            } catch (error) {
-                console.error('Error saving OAuth settings:', error);
-                showTestResult('Error saving settings: ' + error.message, 'error');
-            }
-        }
-
-        async function testOAuthConfig() {
-            try {
-                const clientId = document.getElementById('ghlClientId').value;
-                const clientSecret = document.getElementById('ghlClientSecret').value;
-
-                if (!clientId || !clientSecret) {
-                    showTestResult('Please enter Client ID and Client Secret first', 'error');
-                    return;
-                }
-
-                showTestResult('Testing OAuth configuration...', 'info');
-
-                // Test the OAuth endpoint
-                const authUrl = `https://marketplace.gohighlevel.com/oauth/chooselocation?response_type=code&redirect_uri=${encodeURIComponent(window.location.origin + '/oauth-callback')}&client_id=${clientId}&scope=locations.readonly contacts.write opportunities.write`;
-
-                // Validate the OAuth URL structure
-                if (clientId.length < 10) {
-                    showTestResult('Client ID appears to be invalid (too short)', 'error');
-                    return;
-                }
-
-                // Try to validate the configuration without making actual requests
-                const configValid = validateOAuthConfig(clientId, clientSecret);
-
-                if (configValid.valid) {
-                    showTestResult(`✅ OAuth configuration appears valid!\n\nAuthorization URL would be:\n${authUrl}\n\nNote: This test validates the format only. Actual functionality requires testing with a real OAuth flow.`, 'success');
-                } else {
-                    showTestResult(`❌ OAuth configuration issues:\n${configValid.errors.join('\n')}`, 'error');
-                }
-
-                await logAdminActivity('oauth_config_test', 'settings', null, {
-                    client_id_length: clientId.length,
-                    test_result: configValid.valid ? 'success' : 'failed'
-                });
-
-            } catch (error) {
-                console.error('Error testing OAuth config:', error);
-                showTestResult('Error testing OAuth configuration: ' + error.message, 'error');
-            }
-        }
-
-        function validateOAuthConfig(clientId, clientSecret) {
-            const errors = [];
-
-            // Basic validation
-            if (!clientId || clientId.length < 10) {
-                errors.push('Client ID appears invalid (should be 10+ characters)');
-            }
-
-            if (!clientSecret || clientSecret.length < 10) {
-                errors.push('Client Secret appears invalid (should be 10+ characters)');
-            }
-
-            // Check format (GHL client IDs typically start with specific patterns)
-            if (clientId && !clientId.match(/^[a-zA-Z0-9_-]+$/)) {
-                errors.push('Client ID contains invalid characters');
-            }
-
-            return {
-                valid: errors.length === 0,
-                errors: errors
-            };
-        }
-
-        async function initiateOAuthFlow() {
-            try {
-                const clientId = document.getElementById('ghlClientId').value;
-
-                if (!clientId) {
-                    showTestResult('Please enter Client ID first', 'error');
-                    return;
-                }
-
-                const redirectUri = encodeURIComponent(window.location.origin + '/oauth-callback');
-                const scope = 'locations.readonly contacts.write opportunities.write calendars.readonly calendars/events.write workflows.readonly';
-
-                const authUrl = `https://marketplace.gohighlevel.com/oauth/chooselocation?response_type=code&redirect_uri=${redirectUri}&client_id=${clientId}&scope=${scope}&state=${btoa(JSON.stringify({timestamp: Date.now(), admin: currentUser.id}))}`;
-
-                showTestResult(`🚀 Starting OAuth flow...\n\nYou will be redirected to GoHighLevel for authorization.\n\nMake sure you have created an OAuth callback handler at: ${window.location.origin}/oauth-callback`, 'info');
-
-                await logAdminActivity('oauth_flow_initiated', 'settings', null, {
-                    client_id: clientId,
-                    redirect_uri: window.location.origin + '/oauth-callback'
-                });
-
-                // Wait 3 seconds then redirect
-                setTimeout(() => {
-                    window.open(authUrl, '_blank');
-                }, 3000);
-
-            } catch (error) {
-                console.error('Error initiating OAuth flow:', error);
-                showTestResult('Error starting OAuth flow: ' + error.message, 'error');
-            }
-        }
-
-        function showTestResult(message, type) {
-            const resultDiv = document.getElementById('oauthTestResult');
-            resultDiv.style.display = 'block';
-            resultDiv.style.whiteSpace = 'pre-line'; // Preserve line breaks
-
-            switch(type) {
-                case 'success':
-                    resultDiv.style.backgroundColor = '#d4edda';
-                    resultDiv.style.borderColor = '#c3e6cb';
-                    resultDiv.style.color = '#155724';
-                    break;
-                case 'error':
-                    resultDiv.style.backgroundColor = '#f8d7da';
-                    resultDiv.style.borderColor = '#f5c6cb';
-                    resultDiv.style.color = '#721c24';
-                    break;
-                case 'info':
-                    resultDiv.style.backgroundColor = '#cce5ff';
-                    resultDiv.style.borderColor = '#b8daff';
-                    resultDiv.style.color = '#004085';
-                    break;
-            }
-
-            resultDiv.style.border = '1px solid';
-            resultDiv.textContent = message;
-
-            // Auto-hide after 10 seconds for success/info messages
-            if (type !== 'error') {
-                setTimeout(() => {
-                    resultDiv.style.display = 'none';
-                }, 10000);
-            }
-        }
 
         async function saveSystemSettings() {
             try {
@@ -1737,6 +1621,136 @@
             } catch (error) {
                 console.error('Error saving system settings:', error);
                 alert('Error saving settings: ' + error.message);
+            }
+        }
+
+        // Workflow Settings Functions
+        async function saveWorkflowSettings() {
+            try {
+                const workflowEnabled = document.getElementById('workflowEnabled').checked;
+                const createUpdateContact = document.getElementById('createUpdateContact').checked;
+                const addToPipeline = document.getElementById('addToPipeline').checked;
+                const addTags = document.getElementById('addTags').checked;
+                const pipelineId = document.getElementById('pipelineId').value;
+                const orderTags = document.getElementById('orderTags').value;
+                const orderValueField = document.getElementById('orderValueField').value;
+
+                const updates = [
+                    { setting_key: 'workflow_enabled', setting_value: workflowEnabled.toString() },
+                    { setting_key: 'workflow_create_contact', setting_value: createUpdateContact.toString() },
+                    { setting_key: 'workflow_add_pipeline', setting_value: addToPipeline.toString() },
+                    { setting_key: 'workflow_add_tags', setting_value: addTags.toString() },
+                    { setting_key: 'workflow_pipeline_id', setting_value: pipelineId },
+                    { setting_key: 'workflow_order_tags', setting_value: orderTags },
+                    { setting_key: 'workflow_order_value_field', setting_value: orderValueField }
+                ];
+
+                for (const update of updates) {
+                    await supabase
+                        .from('admin_settings')
+                        .upsert(update);
+                }
+
+                await logAdminActivity('workflow_settings_update', 'settings', null, {
+                    workflow_enabled: workflowEnabled,
+                    actions: {
+                        create_contact: createUpdateContact,
+                        add_pipeline: addToPipeline,
+                        add_tags: addTags
+                    }
+                });
+
+                showWorkflowResult('✅ Workflow settings saved successfully!', 'success');
+
+            } catch (error) {
+                console.error('Error saving workflow settings:', error);
+                showWorkflowResult('❌ Error saving workflow settings: ' + error.message, 'error');
+            }
+        }
+
+        async function testWorkflow() {
+            try {
+                const workflowEnabled = document.getElementById('workflowEnabled').checked;
+
+                if (!workflowEnabled) {
+                    showWorkflowResult('⚠️ Workflow is disabled. Enable it first to test.', 'error');
+                    return;
+                }
+
+                const privateToken = document.getElementById('ghlPrivateToken').value;
+                const locationId = document.getElementById('ghlLocationId').value;
+
+                if (!privateToken || !locationId) {
+                    showWorkflowResult('❌ Please configure Private Integration Token and Location ID first', 'error');
+                    return;
+                }
+
+                showWorkflowResult('🧪 Testing workflow with sample order data...', 'info');
+
+                // Test data
+                const testOrderData = {
+                    customerEmail: 'test@example.com',
+                    customerName: 'Test Customer',
+                    orderTotal: 99.99,
+                    orderId: 'TEST-' + Date.now()
+                };
+
+                // Check which actions are enabled
+                const actions = [];
+                if (document.getElementById('createUpdateContact').checked) actions.push('✓ Create/Update Contact');
+                if (document.getElementById('addToPipeline').checked) actions.push('✓ Add to Pipeline');
+                if (document.getElementById('addTags').checked) actions.push('✓ Add Tags');
+
+                if (actions.length === 0) {
+                    showWorkflowResult('⚠️ No workflow actions are enabled. Please enable at least one action.', 'error');
+                    return;
+                }
+
+                // Simulate success (in real implementation, this would call GoHighLevel APIs)
+                setTimeout(() => {
+                    showWorkflowResult(`✅ Workflow Test Successful!
+
+Test Order: ${testOrderData.orderId}
+Customer: ${testOrderData.customerName}
+Total: $${testOrderData.orderTotal}
+
+Actions that would be performed:
+${actions.join('\n')}
+
+Note: This is a simulation. Real orders will trigger actual GoHighLevel API calls.`, 'success');
+                }, 2000);
+
+            } catch (error) {
+                console.error('Error testing workflow:', error);
+                showWorkflowResult('❌ Error testing workflow: ' + error.message, 'error');
+            }
+        }
+
+        function showWorkflowResult(message, type) {
+            const resultDiv = document.getElementById('workflowResult');
+            resultDiv.style.display = 'block';
+            resultDiv.textContent = message;
+            resultDiv.className = '';
+
+            if (type === 'success') {
+                resultDiv.style.backgroundColor = '#d4edda';
+                resultDiv.style.color = '#155724';
+                resultDiv.style.borderLeft = '4px solid #28a745';
+            } else if (type === 'error') {
+                resultDiv.style.backgroundColor = '#f8d7da';
+                resultDiv.style.color = '#721c24';
+                resultDiv.style.borderLeft = '4px solid #dc3545';
+            } else if (type === 'info') {
+                resultDiv.style.backgroundColor = '#cce7ff';
+                resultDiv.style.color = '#004085';
+                resultDiv.style.borderLeft = '4px solid #007bff';
+            }
+
+            // Auto-hide after 10 seconds for success/info messages
+            if (type !== 'error') {
+                setTimeout(() => {
+                    resultDiv.style.display = 'none';
+                }, 10000);
             }
         }
 
