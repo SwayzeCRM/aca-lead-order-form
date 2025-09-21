@@ -1,0 +1,1514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ACA Lead Order Form</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            line-height: 1.5;
+            color: #1f2937;
+            background-color: #f5f5f5;
+            padding: 24px 16px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 4px;
+            border: 1px solid #e0e0e0;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+        }
+
+        .header {
+            background: #ffffff;
+            border-bottom: 2px solid #e0e0e0;
+            padding: 32px 40px;
+            position: relative;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            color: #7f8c8d;
+            font-size: 16px;
+        }
+
+        .back-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #95a5a6;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: background-color 0.2s ease;
+        }
+
+        .back-btn:hover {
+            background: #7f8c8d;
+        }
+
+        .form-container {
+            padding: 40px;
+        }
+
+        .order-type-selector {
+            margin-bottom: 40px;
+        }
+
+        .order-type-selector h3 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 16px;
+        }
+
+        .radio-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        @media (max-width: 640px) {
+            .radio-group {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .radio-option {
+            position: relative;
+            cursor: pointer;
+        }
+
+        .radio-option input[type="radio"] {
+            position: absolute;
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .radio-option label {
+            display: block;
+            padding: 16px;
+            background: #f9fafb;
+            border: 2px solid #e5e7eb;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 500;
+            text-align: center;
+        }
+
+        .radio-option input[type="radio"]:checked + label {
+            background: #e8f4fd;
+            border-color: #2980b9;
+            color: #2c3e50;
+        }
+
+        .form-section {
+            display: none;
+        }
+
+        .form-section.active {
+            display: block;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 24px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #ecf0f1;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+            color: #34495e;
+            font-size: 14px;
+        }
+
+        .required {
+            color: #e74c3c;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #bdc3c7;
+            border-radius: 4px;
+            font-size: 14px;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+            background: white;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #2980b9;
+            box-shadow: 0 0 0 2px rgba(41, 128, 185, 0.1);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+
+            .form-container {
+                padding: 24px;
+            }
+
+            .header {
+                padding: 24px;
+            }
+        }
+
+        .help-text {
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-top: 4px;
+            line-height: 1.4;
+        }
+
+        .api-key-container {
+            position: relative;
+        }
+
+        .api-info-tooltip {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 20px;
+            height: 20px;
+            background: #2980b9;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            cursor: help;
+            font-weight: bold;
+        }
+
+        .api-info-tooltip:hover::after {
+            content: "To find your API key: Go to Settings > Business Profile > Company tab and copy your API key from the API section";
+            position: absolute;
+            bottom: 25px;
+            right: 0;
+            width: 280px;
+            padding: 10px;
+            background: #2c3e50;
+            color: white;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: normal;
+            z-index: 1000;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+            line-height: 1.4;
+        }
+
+        .search-container {
+            position: relative;
+        }
+
+        .dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            max-height: 200px;
+            overflow-y: auto;
+            background: white;
+            border: 1px solid #d1d5db;
+            border-top: none;
+            border-radius: 0 0 6px 6px;
+            z-index: 1000;
+            display: none;
+        }
+
+        .dropdown-option {
+            padding: 12px;
+            cursor: pointer;
+            font-size: 14px;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        .dropdown-option:hover {
+            background: #f9fafb;
+        }
+
+        .dropdown-option:last-child {
+            border-bottom: none;
+        }
+
+        .selected-items {
+            margin-top: 8px;
+            min-height: 20px;
+        }
+
+        .item-tag {
+            display: inline-flex;
+            align-items: center;
+            background: #f3f4f6;
+            color: #374151;
+            padding: 4px 8px;
+            margin: 2px 4px 2px 0;
+            border-radius: 4px;
+            font-size: 12px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .item-tag .remove {
+            margin-left: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            color: #6b7280;
+            width: 16px;
+            height: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.2s ease;
+        }
+
+        .item-tag .remove:hover {
+            background: #e5e7eb;
+            color: #374151;
+        }
+
+        .counter {
+            font-size: 12px;
+            color: #6b7280;
+            margin-top: 6px;
+        }
+
+        .submit-section {
+            margin-top: 40px;
+            padding-top: 32px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .submit-btn {
+            background: #2980b9;
+            color: white;
+            padding: 12px 32px;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            width: 100%;
+        }
+
+        .submit-btn:hover {
+            background: #21618c;
+        }
+
+        .submit-btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        .error-message {
+            color: #e74c3c;
+            font-size: 12px;
+            margin-top: 4px;
+        }
+
+        /* Legal Popup Styles */
+        .popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 10000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .popup-overlay.show {
+            display: flex;
+        }
+
+        .popup-content {
+            background: white;
+            border-radius: 8px;
+            width: 100%;
+            max-width: 650px;
+            max-height: 90vh;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            animation: popupSlideIn 0.3s ease-out;
+        }
+
+        @keyframes popupSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .popup-header {
+            background: #2c3e50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .popup-header h2 {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .popup-body {
+            padding: 30px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .legal-text {
+            font-size: 14px;
+            line-height: 1.6;
+            color: #2c3e50;
+            margin-bottom: 25px;
+        }
+
+        .legal-text h3 {
+            color: #2c3e50;
+            margin: 20px 0 10px 0;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .legal-text p {
+            margin-bottom: 15px;
+        }
+
+        .signature-section {
+            border: 2px solid #bdc3c7;
+            border-radius: 6px;
+            padding: 20px;
+            background: #f8f9fa;
+            margin: 20px 0;
+        }
+
+        .signature-section label {
+            display: block;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .signature-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #bdc3c7;
+            border-radius: 4px;
+            font-size: 16px;
+            font-family: cursive;
+            background: white;
+        }
+
+        .signature-input:focus {
+            outline: none;
+            border-color: #2980b9;
+        }
+
+        .agreement-checkbox {
+            display: flex;
+            align-items: flex-start;
+            margin: 20px 0;
+            gap: 10px;
+        }
+
+        .agreement-checkbox input[type="checkbox"] {
+            margin-top: 4px;
+            width: 18px;
+            height: 18px;
+        }
+
+        .agreement-checkbox label {
+            font-size: 14px;
+            color: #2c3e50;
+            line-height: 1.5;
+        }
+
+        .popup-footer {
+            padding: 20px 30px;
+            background: #f8f9fa;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            gap: 15px;
+            justify-content: flex-end;
+        }
+
+        .popup-btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .popup-btn.cancel {
+            background: #95a5a6;
+            color: white;
+        }
+
+        .popup-btn.cancel:hover {
+            background: #7f8c8d;
+        }
+
+        .popup-btn.confirm {
+            background: #27ae60;
+            color: white;
+        }
+
+        .popup-btn.confirm:hover {
+            background: #229954;
+        }
+
+        .popup-btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+
+        /* Thank You Confirmation Box */
+        .confirmation-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 10001;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .confirmation-overlay.show {
+            display: flex;
+        }
+
+        .confirmation-content {
+            background: white;
+            border-radius: 8px;
+            width: 100%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: popupSlideIn 0.3s ease-out;
+        }
+
+        .confirmation-header {
+            background: linear-gradient(135deg, #27ae60, #229954);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .confirmation-header h2 {
+            margin: 0 0 10px 0;
+            font-size: 28px;
+            font-weight: 600;
+        }
+
+        .confirmation-header p {
+            margin: 0;
+            font-size: 16px;
+            opacity: 0.95;
+        }
+
+        .confirmation-body {
+            padding: 30px;
+        }
+
+        .order-summary {
+            background: #f8f9fa;
+            border-radius: 6px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+
+        .order-summary h3 {
+            color: #2c3e50;
+            font-size: 18px;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .summary-item:last-child {
+            border-bottom: none;
+        }
+
+        .summary-label {
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+
+        .summary-value {
+            color: #2c3e50;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .next-steps {
+            background: #fff9e6;
+            border: 1px solid #f4e1a1;
+            border-radius: 6px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+
+        .next-steps h3 {
+            color: #2c3e50;
+            font-size: 18px;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .step-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .step-list li {
+            padding: 10px 0;
+            padding-left: 30px;
+            position: relative;
+            color: #34495e;
+            font-size: 14px;
+        }
+
+        .step-list li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #27ae60;
+            font-weight: bold;
+        }
+
+        .confirmation-footer {
+            padding: 20px 30px;
+            background: #f8f9fa;
+            text-align: center;
+        }
+
+        .close-btn {
+            background: #2980b9;
+            color: white;
+            padding: 12px 32px;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .close-btn:hover {
+            background: #21618c;
+        }
+
+        /* Clean scrollbar for dropdowns */
+        .dropdown::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .dropdown::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+
+        .dropdown::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+
+        .dropdown::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>ACA Lead Order Form</h1>
+            <p>Order qualified ACA leads for your insurance business</p>
+            <a href="index.html" class="back-btn">← Back to Dashboard</a>
+        </div>
+
+        <div class="form-container">
+            <form id="leadOrderForm">
+                <div class="order-type-selector">
+                    <h3>Order Type</h3>
+                    <div class="radio-group">
+                        <div class="radio-option">
+                            <input type="radio" id="individual" name="orderType" value="individual">
+                            <label for="individual">Individual NPN</label>
+                        </div>
+                        <div class="radio-option">
+                            <input type="radio" id="agency" name="orderType" value="agency">
+                            <label for="agency">Agency NPN</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Individual NPN Form -->
+                <div id="individualForm" class="form-section">
+                    <!-- Contact Information Section -->
+                    <h3 class="section-title">Contact Information</h3>
+                    <div class="help-text" style="margin-bottom: 20px;">Information about the person placing this order</div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>First Name <span class="required">*</span></label>
+                            <input type="text" name="individual_firstName" class="individual-field">
+                        </div>
+                        <div class="form-group">
+                            <label>Last Name <span class="required">*</span></label>
+                            <input type="text" name="individual_lastName" class="individual-field">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Email <span class="required">*</span></label>
+                            <input type="email" name="individual_contactEmail" class="individual-field">
+                        </div>
+                        <div class="form-group">
+                            <label>Phone <span class="required">*</span></label>
+                            <input type="tel" name="individual_contactPhone" class="individual-field">
+                        </div>
+                    </div>
+
+                    <!-- Consent Information Section -->
+                    <h3 class="section-title" style="margin-top: 40px;">Consent Information</h3>
+                    <div class="help-text" style="margin-bottom: 20px;">Information that will appear on consent/attestation legal documentation</div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Agent First Name (as on License) <span class="required">*</span></label>
+                            <input type="text" name="individual_firstNameLicense" class="individual-field">
+                        </div>
+                        <div class="form-group">
+                            <label>Agent Last Name (as on License) <span class="required">*</span></label>
+                            <input type="text" name="individual_lastNameLicense" class="individual-field">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Agent Email (for Consent Form) <span class="required">*</span></label>
+                            <input type="email" name="individual_consentEmail" class="individual-field">
+                            <div class="help-text">Email address that will appear on consent form</div>
+                        </div>
+                        <div class="form-group">
+                            <label>Agent Phone (for Consent Form) <span class="required">*</span></label>
+                            <input type="tel" name="individual_consentPhone" class="individual-field">
+                            <div class="help-text">Phone number that will appear on consent form</div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Individual Agent NPN <span class="required">*</span></label>
+                        <input type="text" name="individual_npn" class="individual-field">
+                    </div>
+                </div>
+
+                <!-- Agency NPN Form -->
+                <div id="agencyForm" class="form-section">
+                    <!-- Contact Information Section -->
+                    <h3 class="section-title">Contact Information</h3>
+                    <div class="help-text" style="margin-bottom: 20px;">Information about the person placing this order</div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>First Name <span class="required">*</span></label>
+                            <input type="text" name="agency_firstName" class="agency-field">
+                            <div class="help-text">Agency Owner/Manager placing order</div>
+                        </div>
+                        <div class="form-group">
+                            <label>Last Name <span class="required">*</span></label>
+                            <input type="text" name="agency_lastName" class="agency-field">
+                            <div class="help-text">Agency Owner/Manager placing order</div>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Email <span class="required">*</span></label>
+                            <input type="email" name="agency_contactEmail" class="agency-field">
+                            <div class="help-text">Invoice will be sent to this email</div>
+                        </div>
+                        <div class="form-group">
+                            <label>Phone <span class="required">*</span></label>
+                            <input type="tel" name="agency_contactPhone" class="agency-field">
+                            <div class="help-text">Cell phone of person placing order</div>
+                        </div>
+                    </div>
+
+                    <!-- Consent Information Section -->
+                    <h3 class="section-title" style="margin-top: 40px;">Consent Information</h3>
+                    <div class="help-text" style="margin-bottom: 20px;">Information that will appear on consent/attestation legal documentation</div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Agency NPN <span class="required">*</span></label>
+                            <input type="text" name="agency_npn" class="agency-field">
+                        </div>
+                        <div class="form-group">
+                            <label>Agency Name <span class="required">*</span></label>
+                            <input type="text" name="agency_name" class="agency-field">
+                            <div class="help-text">Exact name as registered</div>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Agency Phone (for Consent) <span class="required">*</span></label>
+                            <input type="tel" name="agency_consentPhone" class="agency-field">
+                            <div class="help-text">Will appear on consent agreement</div>
+                        </div>
+                        <div class="form-group">
+                            <label>Agency Email (for Consent) <span class="required">*</span></label>
+                            <input type="email" name="agency_consentEmail" class="agency-field">
+                            <div class="help-text">Will appear on consent agreement</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Common Fields -->
+                <div id="commonFields" class="form-section">
+                    <h3 class="section-title">Order Information</h3>
+                    <div class="help-text" style="margin-bottom: 20px;">Lead requirements, quantities, and carrier preferences</div>
+
+                    <!-- API Key Field -->
+                    <div class="form-group">
+                        <label>API Key <span class="required">*</span></label>
+                        <div class="api-key-container">
+                            <input type="text" name="apiKey" id="apiKey" class="common-field" placeholder="Enter your CRM API key">
+                            <span class="api-info-tooltip">?</span>
+                        </div>
+                        <div class="help-text">To find your API key: Go to Settings > Business Profile > Company tab and copy your API key from the API section</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>States <span class="required">*</span></label>
+                        <div class="help-text">Minimum 5 states required. More states = faster processing</div>
+                        <div class="search-container">
+                            <input type="text" id="stateSearch" placeholder="Search and select states..." autocomplete="off">
+                            <div class="dropdown" id="stateDropdown"></div>
+                        </div>
+                        <div class="selected-items" id="selectedStates"></div>
+                        <div class="counter">Selected: <span id="stateCount">0</span> states (Minimum: 5)</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Lead Quantity <span class="required">*</span></label>
+                        <select name="leadQuantity" class="common-field">
+                            <option value="">Select quantity</option>
+                            <option value="50">50 Leads - $1,500</option>
+                            <option value="100">100 Leads - $3,000</option>
+                            <option value="200">200 Leads - $6,000</option>
+                            <option value="400">400 Leads - $12,000</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Insurance Carriers</label>
+                        <div class="help-text">Search and select carriers for the plan picker</div>
+                        <div class="search-container">
+                            <input type="text" id="carrierSearch" placeholder="Search carriers..." autocomplete="off">
+                            <div class="dropdown" id="carrierDropdown"></div>
+                        </div>
+                        <div class="selected-items" id="selectedCarriers"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Additional Carriers</label>
+                        <textarea name="additionalCarriers" placeholder="Add any additional carriers not found in the search above (comma separated)"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Invoice Email <span class="required">*</span></label>
+                        <input type="email" name="invoiceEmail" class="common-field">
+                    </div>
+
+                    <div class="submit-section">
+                        <button type="submit" class="submit-btn">Submit Lead Order</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- LEGAL AGREEMENT POPUP -->
+    <div class="popup-overlay" id="legalPopup">
+        <div class="popup-content">
+            <div class="popup-header">
+                <h2>Legal Agreement & Signature Required</h2>
+            </div>
+            <div class="popup-body">
+                <div class="legal-text">
+                    <h3>Terms and Conditions</h3>
+                    <p>By submitting this ACA lead order, you acknowledge and agree to the following terms and conditions:</p>
+
+                    <h3>1. Non-Liability Agreement</h3>
+                    <p>You acknowledge that Swayze Marketing LLC acts solely as a lead generation service provider. Swayze Marketing LLC shall not be held liable for any outcomes, results, or consequences arising from the use of leads provided. All leads are provided "as is" without warranty of any kind, express or implied.</p>
+
+                    <h3>2. No Refund Policy</h3>
+                    <p>All lead orders are final. No refunds will be provided for any reason, including but not limited to: lead quality, conversion rates, compliance issues, or changes in business circumstances. Payment is due upon order confirmation and all sales are considered final upon delivery of leads.</p>
+
+                    <h3>3. Regulatory Compliance</h3>
+                    <p>You agree to comply with all applicable federal, state, and local laws and regulations, including but not limited to regulations instituted by the Centers for Medicare & Medicaid Services (CMS). You are solely responsible for ensuring your use of leads complies with all applicable insurance regulations, licensing requirements, and marketing guidelines.</p>
+
+                    <h3>4. Additional Terms</h3>
+                    <p>You certify that you are authorized to place this order on behalf of the individual or agency specified. You agree that the information provided is accurate and complete. Any violation of these terms may result in suspension of services.</p>
+                </div>
+
+                <div class="signature-section">
+                    <label for="legalSignature">Electronic Signature <span class="required">*</span></label>
+                    <input type="text" id="legalSignature" class="signature-input" placeholder="Type your full legal name here" required>
+                    <div style="font-size: 12px; color: #7f8c8d; margin-top: 8px;">
+                        By typing your name above, you agree that this constitutes a legal electronic signature.
+                    </div>
+                </div>
+
+                <div class="agreement-checkbox">
+                    <input type="checkbox" id="agreementCheckbox" required>
+                    <label for="agreementCheckbox">
+                        I have read, understood, and agree to be bound by all terms and conditions stated above. I acknowledge that I am legally authorized to enter into this agreement and that this electronic signature is legally binding.
+                    </label>
+                </div>
+            </div>
+            <div class="popup-footer">
+                <button type="button" class="popup-btn cancel" onclick="closeLegalPopup()">Cancel</button>
+                <button type="button" class="popup-btn confirm" id="confirmSignature" onclick="confirmSignature()" disabled>Confirm & Submit Order</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONFIRMATION POPUP -->
+    <div class="confirmation-overlay" id="confirmationPopup">
+        <div class="confirmation-content">
+            <div class="confirmation-header">
+                <h2>🎉 Order Submitted Successfully!</h2>
+                <p>Your ACA lead order has been received</p>
+            </div>
+            <div class="confirmation-body">
+                <div class="order-summary">
+                    <h3>Order Summary</h3>
+                    <div id="orderSummaryContent">
+                        <!-- Dynamic content will be inserted here -->
+                    </div>
+                </div>
+
+                <div class="next-steps">
+                    <h3>What Happens Next?</h3>
+                    <ul class="step-list">
+                        <li>An invoice will be sent to your email within 24-48 hours</li>
+                        <li>Once payment is received, your order will be processed</li>
+                        <li>ACA leads will start arriving within 5-7 business days</li>
+                        <li>Leads will appear in the ACA Lead Orders Pipeline in your CRM</li>
+                        <li>You'll receive email notifications for each new lead</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="confirmation-footer">
+                <button type="button" class="close-btn" onclick="closeConfirmation()">Back to Dashboard</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Supabase configuration
+        const SUPABASE_URL = 'https://nsypkyubepyjhectnbtx.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5zeXBreXViZXB5amhlY3RuYnR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgzODE5NDUsImV4cCI6MjA3Mzk1Nzk0NX0.m8V1EP4oUSC5qhjGMcbvbDMsg8EebLVR9YXpJkYmASA';
+
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        const carriers = ["4 Ever Life Insurance Company","AAA Access Dental Plan of Texas, Inc.","ABC AUTO PARTS LTD","ACCESS TO CARE HEALTH PLAN LLC","ACCESS TO CARE HEALTH PLAN, LLC","ACE American Insurance Company","ACE Property and Casualty Insurance Company","ADVANTAGE Health Solutions, Inc","AETNA HEALTH INSURANCE COMPANY","AL SHPs","AMERICAN COMMUNITY MUTUAL INSURANCE COMPANY","AMERICAN FIDELITY ASSURANCE COMPANY","AMY JOHNSTON","AR SHPs","ASH Insurance","ATRIO Health Plans","AXA Equitable Life Insurance Company","Access Dental Plan","Access Dental Plan of Utah, Inc","Advantage Resourcing America, Inc.","Advantica Dental Benefits, Inc.","Advantica Insurance Company","Advantica, Inc.","Aegis Security Insurance Company","Aetna","Aetna CVS Health","Aetna Health Inc. (a GA corp.)","Aetna Life Insurance Company","Affiliated Foods Cooperative Inc","Aflac","Al Warren Oil Co., Inc.","Align Senior Care","All Savers Insurance Company","All States Ag Parts, Inc","AllCare Health Plan","Allegian Health Plans","Allegiance Life & Health Insurance, Inc.","Alliant Health Plans","Alliant Health Plans, Inc.","Allianz Life Insurance Company of New York","Allianz Life Insurance Company of North America","Allied National, Inc.","Allstate Benefits","Alpha Dental of Alabama, Inc.","AlwaysCare Benefits, Inc.","Amalgamated Life Insurance Company","Ambetter Health","Ambetter Health of Delaware","Ambetter from Absolute Total Care","Ambetter from Arizona Complete Health","Ambetter from Arkansas Health & Wellness","Ambetter from Buckeye Health Plan","Ambetter from Home State Health","Ambetter from Louisiana Healthcare Connections","Ambetter from MHS","Ambetter from MHS Health WI","Ambetter from Magnolia Health","Ambetter from Meridian","Ambetter from NH Healthy Families","Ambetter from Nebraska Total Care","Ambetter from Peach State Health Plan","Ambetter from Sunflower Health Plan","Ambetter from Sunshine Health","Ambetter from Superior HealthPlan","Ambetter of Alabama","Ambetter of Illinois","Ambetter of North Carolina","Ambetter of Oklahoma","Ambetter of Tennessee","Amedisys","AmeriHealth Caritas Next","AmeriHealth HMO, Inc.","American Family Insurance","American Family Insurance Company","American Family Mutual Insurance Company","American General Life Insurance Company","American General Life and Accident","American General Life and Accident Insurance Company","American Heritage Life Insurance Company","American Income Life Insurance Co","American Medical Security Life Ins CO","American Medical Security Life Ins Co","American Medical Security Life Insurance Company","American National Insurance Company","American National Life Insurance Company of Texas","American Republic Insurance Company","American Sentinel Insurance Company","American Specialty Health Insurance Company","American States Insurance Company","American Underwriters Life Insurance Company","Amerigroup","Amerihealth Caritas Iowa","Ameritas Life Insurance Corp.","Angela Storms","Angle Health","Ansaldo STS USA","Anthem Blue Cross and Blue Sheld","Anthem Blue Cross and Blue Shield","Anthem Health Plans of New Hampshire, Inc.","Anthem Insurance Companies, Inc.","Antidote Health Plan of Arizona, Inc.","Antidote Health Plan of Ohio, Inc.","Apex Tool Group, LLC","Applied Industrial Technologies, Inc.","Arches Health Plan","Argus Dental","Argus Dental & Vision, Inc.","Arise Health Plan","Arkansas Blue Cross Blue Shield","Arkansas Blue Cross and Blue Shield","Arkansas Health Plan Co","Aspirus Arise Health Plan of Michigan, Inc.","Aspirus Health Plan","Associated Mutual Insurance","Assurant Employee Benefits","Assurant Health","Assurity Life Insurance Company","AstraZeneca Pharmaceuticals LP","Asuris Northwest Health","Athens Area Health Plan Select, Inc.","Atlas Roofing Corporation","AultCare Insurance Company","AvMed","Avera Health Plans","Axis Insurance Company","BAE Systems, Inc.","BCBSD, Inc.","BCS Insurance Company","BEST Life","Babcock Power Inc.","Bader Rutter","Baker Boy Bake Shop, Inc.","Bankers Life Insurance Company","Bankers Life and Casualty","Bankers Life and Casualty Company","Bankers Reserve Life Insurance Co.","Banner Health and Aetna Health Insurance Company","BannerAetna","Banyan Community Health Center","Baylor Scott and White Health Plan","Bear River Mental Health Services, Inc.","Blossman Gas, Inc.","Blue Care","Blue Care Network of Michigan","Blue Care of Michigan","Blue Cross & Blue Shield of Mississippi","Blue Cross Blue Shield Healthcare Plan of Georgia, Inc.","Blue Cross Blue Shield of Arizona","Blue Cross Blue Shield of Michigan Mutual Insurance Company","Blue Cross Blue Shield of Montana","Blue Cross Blue Shield of NC","Blue Cross Blue Shield of North Dakota","Blue Cross Blue Shield of Wisconsin","Blue Cross Blue Shield of Wyoming","Blue Cross and Blue Shield of Alabama","Blue Cross and Blue Shield of Arizona, Inc.","Blue Cross and Blue Shield of Georgia, Inc.","Blue Cross and Blue Shield of Illinois","Blue Cross and Blue Shield of Kansas City","Blue Cross and Blue Shield of Kansas, Inc.","Blue Cross and Blue Shield of Louisiana","Blue Cross and Blue Shield of Montana","Blue Cross and Blue Shield of NC","Blue Cross and Blue Shield of Nebraska","Blue Cross and Blue Shield of Oklahoma","Blue Cross and Blue Shield of Texas","BlueChoice HealthPlan","BlueCross BlueShield Kansas Solutions, Inc.","BlueCross BlueShield of South Carolina","BlueCross BlueShield of Tennessee","BlueCross BlueShield of Tennessee, Inc.","BlueCross and Blue Shield of North Carolina","Bluegrass Family Health, Inc.","Bread Financial Payments, Inc.","BridgeSpan Health Company","Bright HealthCare","Bright HealthCare Employer","Bright HealthCare from Bright Health Company of Arizona","Bright HealthCare from Bright Health Insurance Company","Brilliance Health","Brocade Communications Systems Inc.","Brown Distributing","Buckeye Health Plan Community Solutions, Inc.","CAID Industries, Inc.","CBIZ","CCL Industries Corporation","CGLIC","CHC of FL","CHRISTUS Health Plan","CIGNA","Canyon Insurance Group","Capital Health Plan","Capital Senior Living, Inc.","CareSource","CareSource Kansas, LLC.","CareSource Tennessee Co.","Cariten Health Plan, Inc.","Cariten Insurance Company","Carolina Care Plan","Catamaran Insurance of Ohio, Inc.","Catawba College","Catawba Valley Medical Center","Celtic Insurance Company","Cenral United Life Insurance Company","Centene Management Company","Centene Management Welfare Benefit Plan","Central Bancompany","Central United Life Insurance Company","Chorus Community Health Plans","Cigna","Cigna HealthCare of Arizona, Inc","Cigna HealthCare of Georgia, Inc","Cigna HealthCare of St. Louis, Inc","Cigna Healthcare","Cigna Healthcare of South Carolina","Cigna Worldwide Insurance Company","Circulo Health of Ohio, Inc.","Citrus Health Care, Inc.","City of Duncanville","City of Lakeland","CoOportunity Health","Commercial Casualty Insurance Company","Common Ground Healthcare Cooperative","Community First","Community First Health Plans","Community Health Alliance","Community Health Choice","Community Health Options","Community Insurance Company","CommunityCare","CommunityCare HMO, Inc.","CommunityCare Life & Health Insurance Company","CommunityCare PPO","Companion Life Insurance Company","Compcare Health Services Insurance Corporation","Concert Health Plan Insurance Company","Connecticut General Life Insurance Co","Conseco Life Insurance Company","Conseco Life Insurance Company of Texas","Consumers Life Insurance Company","Consumers Mutual Insurance of Michigan","Consumers' Choice Health Plan","Cook Childrens Health Plan","Cotton States Life Insurance Company","Coventry","Coventry Health & Life Insurance Co.","Coventry Health & Life Insurance Company","Coventry Health Care","Coventry Health Care Of Kansas Inc","Coventry Health Care of Kansas, Inc.","Coventry Health Care of Nebraska Inc.","Coventry Health Care of Texas, Inc.","Coventry Health Care of West Virginia, Inc.","Coventry Health Care of the Carolinas, Inc.","Coventry Health and Life","Coventry Health and Life - TNARMS","Coventry Health and Life Insurance Co.","Cox Health Systems HMO, Inc.","Cox HealthPlans","CrestPoint Health Insurance Company","Curative","DAKOTACARE","DE SHPs","DENCAP Dental Plans, Inc","DSM USA Insurance Company","DST Systems, Inc.","DUVAL ASPHALT PRODUCTS INC","DYSART UNIFIED SCHOOL DISTRICT","Daimler Trucks North America","Dean Health Plan","Dean Health Plan, Inc","Delaware American Life Insurance Company","Dell Childrens Health Plan","Dell Issuer2","Delsure Health Insurance Inc","Delta Dental","Delta Dental Insurance Company","Delta Dental PPO","Delta Dental Plan of Oregon","Delta Dental of Alaska","Delta Dental of Arizona","Delta Dental of Arkansas","Delta Dental of Illinois","Delta Dental of Indiana","Delta Dental of Iowa","Delta Dental of Kansas","Delta Dental of Michigan","Delta Dental of Minnesota","Delta Dental of Missouri","Delta Dental of Nebraska","Delta Dental of North Carolina","Delta Dental of Ohio","Delta Dental of Oklahoma","Delta Dental of South Carolina","Delta Dental of South Dakota","Delta Dental of Tennessee","Delta Dental of Wisconsin, Inc.","Delta Dental of Wyoming","DeltaCare USA","DentaQuest Insurance Company Inc- IL","DentaQuest Insurance Company Inc- OH","DentaQuest Insurance Company Inc- TN","DentaQuest Insurance Company, Inc.","DentaQuest Insurance Company-MO","DentaQuest USA Insurance","DentaQuest USA Insurance Company, Inc.","DentaQuest- LA","DentaTrust","DentaTrust/DentaSpan","Dental Health Services","Dentegra Insurance Company","Dentegra PPO","DentegraStar","Deseret Mutual Insurance Company","Dominion National","Driscoll Health System","EMI Health","ERC","ERICO International Corporation","Emphesys Insurance Company","Empire Today","Employee Benefit Management Corp","Employer Choice Insurance Company, Inc.","Employers Dental Services","Engineered Machined Products","Enterprise Life Insurance Company","Essence Healthcare, Inc","Everence Association, Inc","Everence Insurance Company","FFE Issuer","FL SHPs","Family Health Hawaii mbs","Family Health Network Marketplace","FamilyCare Health Plans, Inc.","Farm Bureau Health Plans","Farmers Investment CO","Federated Mutual Insurance Company","Fidelity Life Association","First Allmerica Financial Life Ins. Co","First Choice Next","First Commonwealth Insurance Company","First Commonwealth Limited Health Services Corporation","First Commonwealth Limited Health Services Corporation of Michigan","First Commonwealth of Missouri, Inc.","First Health Life & Health Insurance Co.","FirstCare Health Plans","FirstCare PPO","FirstCarolinaCare Insurance Company","Florida Blue","Florida Blue (BlueCross BlueShield FL)","Florida Blue HMO (a BlueCross BlueShield FL company)","Florida Combined Life","Florida Health Care Plans","Florida Health Solution HMO Company","Florida Student Health Plan","Freedom Life Insurance","Freedom Life Insurance Company of America","Friday Health Plans","Friday Health Plans of Missouri Insurance Company, Inc.","Friday Health Plans of Tennessee Inc","Friday of Health Plans of Florida Inc","GA SHPs","GF Insurance, LLC","GFSI, Inc","GMS Reinsurance Company, LTD","GOLDEN DENTAL PLANS, INC.","General American Life Insurance Company","Generations Healthcare","Georgia Health Marketplace LLC","GlobalHealth","Globe Life and Accident Insurance Co","Golden Rule Insurance Company","Grand Valley Health Plan","Great Southern Life Insurance Company","Group Administrators, Ltd.","Group Benefit Services","Group Health Cooperative of Eau Claire","Group Health Cooperative of South Central Wisconsin","Group Health Cooperative-SCW","Group Major Medical Plan","Guarantee Trust Life Insurance Company","Guardian","Guardian Life Insurance Company of America","Gundersen Health Plan, Inc.","HAP","HAP CareSource","HBD Industries, Inc.","HCC Life Insurance Company","HD Supply","HEALTHCHOICE of MICHIGAN","HM Health Insurance Company","HM Life Insurance Company","HMO Louisiana","HMO Missouri, Inc.","HMO Missouri, Inc.(Anthem BCBS)","HMSA","Harbor Health Plan, Inc.","Harken Health","Harken Health Insurance Company","Hartford Life & Accident Insurance Company","Harvard Pilgrim Health Care","Hawaii Dental Service","Hawaii Medical Assurance Association","Health Advantage","Health Alliance","Health Alliance Connect","Health Alliance Medical Plans, Inc.","Health Alliance Midwest Inc.","Health Alliance Midwest, Inc.","Health Choice Arizona Inc","Health Choice Insurance Co.","Health First Commercial Plans, Inc.","Health First Government Plans, Inc.","Health First Health Plans, Inc.","Health First Insurance, Inc.","Health Matters of Central Oregon","Health Net","Health Net Health Plan of Oregon, Inc","Health Net Health Plan of Oregon, Inc.","Health Net Life Insurance Company","Health Net of Arizona, Inc","Health Republic Insurance Company","Health Tradition Health Plan","HealthAmerica Pennsylvania, Inc","HealthLink HMO, Inc.","HealthMatters of Central Oregon","HealthPartners","HealthPartners Insurance Company","HealthPartners UnityPoint Health","HealthPlan Services","HealthPlus Partners, Inc.","HealthPlus of Michigan","HealthSpan","HealthSpan Integrated Care","HealthSpring of Alabama, Inc.","HealthSpring of TN, Inc","HealthSpring of Tennessee, Inc.","Healthplex Dental Services, Inc.","Healthy Alliance Life Insurance Company","Highmark Blue Cross Blue Shield Delaware","Highmark Blue Cross Blue Shield West Virginia","Highmark Health Insurance Company","Humana","Humana Benefit Plan of Ill.,Inc.","Humana Benefit Plan of Illinois, Inc.","Humana Health Insurance Co of FL, Inc.","Humana Health Plan","Humana Health Plan of Ohio, Inc.","Humana Health Plan, Inc.","Humana Health Plan. Inc.","Humana Insurance Company","Humana Insurance Company of Kentucky, Inc.","Humana Wisconsin Health Org. Ins. Corp.","IU Health Plans","IlliniCare Health","Illinois Mutual Life Insurance Company","Imperial Health Plan of the Southwest, Inc.","Imperial Insurance Companies, Inc.","InHealth Mutual","InStil Health","Independence American Ins Co","Insurance Company of Scott & White","Integon National Insurance Company","Investors Life Insurance Company of North America","JMH Health Plan","Jefferson Life Insurance Company","John Alden Life Insurance Company","Johns Manville","KAISER PERMANENTE INSURANCE COMPANY","Kaiser Foundation Health Plan of Georgia, Inc.","Kaiser Permanente","Kaiser Permanente Insurance Company","Kaiser Permenante","Kansas City Life Insurance Company","KelseyCare Advantage","Kinder Morgan","Knights of Columbus","LIBERTY Dental Plan of Florida, Inc.","LIBERTY Dental Plan of Missouri, Inc.","Land of Lincoln Mutual Health Insurance Company","Liberty Mutual Insurance","Liberty Mutual Insurance Company","Liberty National Life Insurance Co","Life of America","LifeMap Assurance Company","LifeSecure Insurance Company","LifeWise Assurance Company","LifeWise Health Plan of Oregon","Lincoln Financial Group","Longevity Health Plan","Louisiana Health Cooperative, Inc.","Loyal American Life Insurance Company","MAMSI Life and Health Insurance Company","MAMSI Life and Health Insurance Company","MCNA Dental","MDwise Marketplace","METRO METALS NORTHWEST INC","MI SHPs","MS SHPs","MVP Health Care","MYERS INDUSTRIES INC","Madison National Life","Madison National Life Insurance Company","Madison National Life Insurance Company, Inc.","Managed Care of North America, Inc","MasterCraft Boat Company","Matthew Thornton Health Plan, Inc.","McLaren Health Plan","McLaren Health Plan Community","McLaren Health Plan Insurance Company","MedAssets Services, LLC","MedCost Benefit Services LLC","MedMutual","Medica","Medica Health Plans of Florida, Inc","Medica Insurance Company","Medical Associates Health Plans","Medical Benefits Mutual Life Insurance","Medical Mutual","Medical Services of America Employee Health Benefit Plan & Trust","Memorial Hermann Commercial Health Plan","Memorial Hermann Health Insurance Company, Inc.","Memorial Hermann Health Plan, Inc","Mercy Health Plans","MercyCare Health Plans","Meritus Health Partners","Meritus Mutual Health Partners","MetLife","MetLife Insurance Company of Connecticut","Metropolitan Life Insurance Company","Mid-West National Life Insurance Company of Tennes","Mid-West National Life Insurance Company of Tennessee","Minuteman Health","Missouri Care, Inc.","Moda Health","Moda Health Plan, Inc.","Molina Healthcare","Momentum Insurance Plans, Inc.","MotivHealth Insurance Company","Mountain Health CO-OP","Mutual of Omaha Insurance Company","N/A","NA","NATIONAL GUARDIAN LIFE INSURANCE COMPANY","NC SHPs","ND Banks Benefit Trust","NE SHPs","NHIC","Nation Care Small Group","National Foundation Life Insurance","National Foundation Life Insurance","National Foundation Life Insurance Company","National Guardian Life Insurance","National Guardian Life Insurance Company","National Health Insurance Company","National Union Fire Insurance Company of Pittsburgh, Pa.","Nationcare","Nationwide Life Insurance Company","Nationwide Mutual Insurance Company","Network Health","New Era Life Insurance Co of Midwest","New Era Life Insurance Company","New Era Life Insurance Company of the MidWest","New Era Life Insurnace Company","New West Health Services","New York Life Insurance Co.","New York Life Insurance Company","NexDent Dental Plans, Inc.","Nippon Life Benefits","Nippon Life Insurance Company of America","North America Administrators, LP","North American Insurance Co.","North Carolina Dental Society Healthcare Plan","Northeast Delta Dental","Nova Pathfinder Healthcare","OHIOHEALTHY HEALTH INSURING CORPORATION","OHIOHEALTHY INSURANCE COMPANY","ONECare","Ochsner Health Plan, Inc.","Octave","Optimum Choice Inc.","OptumRx, Inc.","Oregon's Health CO-OP","Oscar Health Insurance","Oscar Health Plan of Georgia","Oscar Health Plan of North Carolina, Inc","Oscar Health Plan of South Carolina, Inc.","Oscar Health Plan, Inc.","Oscar Insurance Company","Oscar Insurance Company of Florida","Oscar Insurance Company of Illinois, Inc","Oscar Insurance Corporation of Ohio","PBT","PHP","PHP Insurance Company","PHP or Physicians Health Plan","PacifiCare Life Assurance Company","PacifiCare Life and Health Insurance Co","PacificSource Community Health Plans","PacificSource Health Plans","PacificSource Health Plans HMO","Pan-American Life Insurance Company","Paramount","Paramount Advantage","Paramount Care of Michigan","Paramount Care, Inc.","Paramount Dental","Parkland Community Health Plan","Pekin LIfe Insurance Company","Pekin Life Insurance Company","Perennial Advantage","Perico Life Insurance Company","Philadelphia American Life Insurance Co","Philadelphia American Life Insurance Company","Phoenix Health Plans, Inc.","Physicians Benefits Trust Life Insurance Company","Physicians Mutual","Physicians Plus Insurance Corporation","Piedmont WellStar HealthPlans, Inc.","Preferred Health Plan, Inc.","Preferred Health Systems - HMO/POS","Preferred Health Systems - PPO","Preferred Medical Plan","Premera Blue Cross Blue Shield of Alaska","Premier Access Dental","Premier Access Insurance Company","Premier HealthOne","Primewell Health Services of Mississippi","Principal Life Insurance Company","Priority Health","Priority Health Insurance Company, Inc","Prominence HealthFirst of Texas, Inc.","Protective Life Corporation","Protective Life Insurance Company","Providence Health Plan","Prudential Insurance Company of America","Puritan Life Insurance Company of America","QCC Ins Company d/b/a AmeriHealth Ins Co","Qnova Health Inc.","QualChoice","QualChoice Life and Health Insurance Company, Inc.","Quartz","Queen's HealthCare Plan","RU-Insured","Rampart Issuer","Regal Life of America Insurance Company","Regence BlueCross BlueShield of Oregon","Regence BlueCross BlueShield of Utah","Reid Hospital & Health Care Services","Reliance Standard Life Insurance Company","Renaissance Dental","Renaissance Life & Health Insurance Company of America","Reserve Group Management Co","Reserve National Insurance Company","Retailers Insurance Company","Retiree Welfare Plan","RiverBridge Health, LLC.","Roman Catholic Church of the Diocese of Houma-Thib","Rush","SAF-HOLLAND, Inc.","SC SHPs","SIHO Marketplace","SSM Health Plan","STALLINGS BROTHERS INC","SafeGuard Dental MetLife","Samaritan Health Plans, Inc","Sanford Health Plan","Sanford Heart of America Health Plan","SchoolCare","Scott & White Care Plans","Scott and White Health Plan","Securian Dental Plans","Security Health Plan","Security Life Insurance Company of America","Select Health","Select Medical Corporation Group Health Plan","Sendero Health Plans, Local Nonprofit","Sentara Commercial Health Plans Of North Carolina Inc.","Serva Group Health Plan","Serventy Insurance Company, Inc.","Seton Insurance Company","Sharecare, Inc.","Shelter Life Insurance","Shelter Life Insurance Company","Sidecar Health Insurance Company","Sierra Health and Life Insurance Company, Inc.","Silverton Health","SimpleSaveRx","Sirius America Insurance Company","Small Group","Solstice Benefits","Solstice Healthplans of Arizona, Inc.","Solstice Healthplans of Ohio, Inc.","Solstice Healthplans of Texas, Inc.","Solstice of Illinois, Inc.","Sonepar Management","Southern Farm Bureau Life Insurance Company","Southwest Life & Health Insurance Co.","Southwest Service Life Insurance Company","Standard Insurance Company","Standard Life and Accident Insurance Company","Standard Life and Casualty Insurance Company","Standard Security Life","Standard Security Life Insurance Company of New Yo","Standard Security Life Insurance Company of New York","Starr Indemnity & Liability Company","State Farm Mutual Automobile Ins. Co.","Sterling Investors Life Insurance Company","Sterling Life Insurance","Sterling Life Insurance Co.","SummaCare","SummaCare Inc","Sun Life Assurance Company of Canada","Sun Life and Health Insurance Company (U.S.)","Superior Dental Care, Inc.","Symetra Life Insurance Company","THP Insurance Company","TOWER LIFE INSURANCE CO.","TPA Issuer","TRUASSURE INSURANCE COMPANY","TX SHPs","Talcott Resolution Life and Annuity Insurance COmpany","Talcott Resolution Life and Annuity Insurance Company","Talcott Resolution Life and Annuiyt Insurance Company","Taro Health Plan","Teachers Protective Mutual Life","TexHealth 3-Share Plan","TexHealth Brazos Valley","TexHealth Central Texas","TexHealth El Paso","Texas Guaranteed Student Loan Corporation","Texas Health + Aetna Health Insurance Company","Texas Health Resources Health Plan","The Benefit Group, Inc.","The Chesapeake Life Insurance Company","The Cincinnati Life Insurance Company","The EPIC Life Insurance Company","The Health Plan","The MEGA Life and Health Insurance Company","The Ohio National Life Insurance Company","The Ohio State Life Insurance Company","The Prudential Insurance Company of America","The Union Labor Life Insurance Company","The United States Life Ins. Co. in the City of New York","Thrivent Financial for Lutherans","Time Insurance Company","Total Health Care USA, Inc.","Total Health Care, Inc.","TransAmerica Premier Life Insurance","Transamerica Financial Life Insurance Company","Transamerica Life Insurance Company","Trillium Community Health Plan","Trilogy Health Insurance, Inc.","Trinity Health","TruAssure Insurance Company","Truli Health","Trustmark Insurance Company","Trustmark Life Insurance Company","Tufts Health Freedom Plan","Tufts Insurance Company","UCare Health Inc.","UCare Iowa","UHA","UHC FI","UNICARE Health Ins. Co. of the Midwest","UNICARE Health Insurance Company of the Midwest","UNICARE Health Plans of Texas, Inc.","UNICARE Health Plans of the Midwest, Inc","UNICARE Health Plans of the Midwest, Inc.","UNICARE Life & Health Insurance Company","UPMC Health Benefits, Inc.","US HEALTH AND LIFE INSURANCE COMPANY","US Health and Life","US Health and Life Insurance Company","USAble Life Group Health","USAble Mutual Insurance Company","USD 512 Shawnee Mission School District","UTMB","Ullico Casualty Company","UniCare Life & Health Insurance Company","Unified Life Insurance Company","Unimerica Insurance Company","Union Bankers Insurance Company","Union Fidelity Life Insurance Company","Union Health Service, Inc.","Union Pacific Railroad Employes Health Systems","Union Security Insurance Company","United HealthCare Insurance Company","United American Insurance Co","United Concordia Insurance Company","United Concordia Life and Health Insurance Company","United Health One","United Healthcare","United Healthcare Life Insurance Company","United Security","United Security Life and Health Insurance Company","United Securty","United States Branch of the Sun Life Assurance Company of Canada","United States Fire Insurance Company","United Teachers Associates","United of Omaha Life Insurance Company","UnitedHealthOne","UnitedHealthcare","UnitedHealthcare Benefits of Texas, Inc.","UnitedHealthcare Ins Co of Illinois","UnitedHealthcare Ins Co of Ohio","UnitedHealthcare Insurance Company","UnitedHealthcare Insurance Company of Illinois","UnitedHealthcare Insurance Company of New York","UnitedHealthcare Insurance Company of Ohio","UnitedHealthcare Insurance Company of the River Valley","UnitedHealthcare Life Insurance Company","UnitedHealthcare Texas CHIP","UnitedHealthcare of Alabama, Inc","UnitedHealthcare of Illinois Inc","UnitedHealthcare of Kentucky, Ltd.","UnitedHealthcare of New England Inc.","UnitedHealthcare of North Carolina, Inc.","UnitedHealthcare of Ohio, Inc","UnitedHealthcare of Texas","UnitedHealthcare of the Midlands, Inc.","University of Arizona Health Plans - University Healthcare Marketplace","University of Michigan Health Plan","University of Utah Health Plans","VIVA Health","Valley Baptist Insurance Company","Valmet, Inc.","Vantage Health Plan","Victory Packaging LP/GSC of CA","Vista360health","Von Maur, Inc.","Vorys Group Health Plan","WCC Family Healthcare Plan","WEA Insurance Company","WESTERN GROCERS EMPLOYEE BENEFITS TRUST","WINhealth Partners","WMI Mutual Insurance Company","WPS Health Insurance","WPS Health Plan","WV SHPs","Washington National Insurance Company","Welborn Health Plans","WellCare Health Insurance of Kentucky, Inc.","WellCare of North Carolina","WellPoint","WellSense Health Plan","Wellfleet Insurance Company","Wellmark Blue Cross Blue Shield of Iowa","Wellmark Blue Cross and Blue Shield of Iowa","Wellmark Blue Cross and Blue Shield","Wellmark Health Plan of Iowa, Inc.","Wellmark Synergy Health, Inc.","Wellmark Value Health Plan, Inc.","Wellmark of South Dakota, Inc.","Wellpoint","West Coast Life Insurance Company","West Virginia Health Cooperative","Whiting Oil and Gas Corporation","Willamette Dental Group","Wilton Reassurance Company","Wisconsin Auto & Truck Dealers Insurance","Wisconsin Collaborative Insurance Company(Anthem BCBS)","Wisconsin Physicians Services Insurance Corporation","Wisconsin Physicians Svc Insurance Corp","Wolverine Health Plans, Inc.","World Corp Insurance Company","World Insurance Company","You First by El Paso First Health Plans, Inc.","ZOOM+","Zeneca Inc.","Zing Health, Inc.","alan","b.well","iDental from United Concordia","iHeart Media, Inc."];
+
+        const states = ["Alabama", "Alaska", "Arizona", "Arkansas", "California", "Colorado", "Connecticut", "Delaware", "Florida", "Georgia", "Hawaii", "Idaho", "Illinois", "Indiana", "Iowa", "Kansas", "Kentucky", "Louisiana", "Maine", "Maryland", "Massachusetts", "Michigan", "Minnesota", "Mississippi", "Missouri", "Montana", "Nebraska", "Nevada", "New Hampshire", "New Jersey", "New Mexico", "New York", "North Carolina", "North Dakota", "Ohio", "Oklahoma", "Oregon", "Pennsylvania", "Rhode Island", "South Carolina", "South Dakota", "Tennessee", "Texas", "Utah", "Vermont", "Virginia", "Washington", "West Virginia", "Wisconsin", "Wyoming"];
+
+        let selectedStates = [];
+        let selectedCarriers = [];
+        let currentUser = null;
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', async function() {
+            await initializeAuth();
+            await loadFormData();
+        });
+
+        async function initializeAuth() {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                // Redirect to login if not authenticated
+                window.location.href = 'index.html';
+                return;
+            }
+
+            // Load user data
+            const { data: userData, error } = await supabase
+                .from('users')
+                .select('*')
+                .eq('id', session.user.id)
+                .single();
+
+            if (error) {
+                console.error('Failed to load user data:', error);
+                window.location.href = 'index.html';
+                return;
+            }
+
+            currentUser = userData;
+
+            // Check if user is admin first, before API key requirement
+            if (currentUser.role === 'admin') {
+                console.log('Admin user detected, redirecting to admin dashboard');
+                window.location.href = 'admin.html';
+                return;
+            }
+
+            // Check if user has completed setup (has API key) - only for non-admin users
+            if (!currentUser.api_key) {
+                alert('Please complete your account setup first including your API key.');
+                window.location.href = 'index.html';
+                return;
+            }
+        }
+
+        async function loadFormData() {
+            const urlParams = new URLSearchParams(window.location.search);
+
+            // Handle repeat order
+            const repeatOrderId = urlParams.get('repeat');
+            if (repeatOrderId) {
+                await loadRepeatOrder(repeatOrderId);
+                return;
+            }
+
+            // Handle modify order
+            const modifyOrderId = urlParams.get('modify');
+            if (modifyOrderId) {
+                await loadModifyOrder(modifyOrderId);
+                return;
+            }
+
+
+            // Default form initialization
+            initializeForm();
+        }
+
+        async function loadRepeatOrder(orderId) {
+            try {
+                const { data: order, error } = await supabase
+                    .from('orders')
+                    .select('*')
+                    .eq('id', orderId)
+                    .eq('user_id', currentUser.id)
+                    .single();
+
+                if (error) throw error;
+
+                populateFormWithOrderData(order);
+            } catch (error) {
+                console.error('Failed to load repeat order:', error);
+                alert('Failed to load order data. Starting with blank form.');
+                initializeForm();
+            }
+        }
+
+        async function loadModifyOrder(orderId) {
+            try {
+                const { data: order, error } = await supabase
+                    .from('orders')
+                    .select('*')
+                    .eq('id', orderId)
+                    .eq('user_id', currentUser.id)
+                    .single();
+
+                if (error) throw error;
+
+                populateFormWithOrderData(order);
+
+                // Update page title to indicate this is a modification
+                document.querySelector('.header h1').textContent = 'Modify & Reorder ACA Leads';
+                document.querySelector('.header p').textContent = 'Modify your previous order and place a new one';
+            } catch (error) {
+                console.error('Failed to load order for modification:', error);
+                alert('Failed to load order data. Starting with blank form.');
+                initializeForm();
+            }
+        }
+
+
+        function populateFormWithOrderData(orderData) {
+            // Set order type
+            document.querySelector(`input[value="${orderData.order_type}"]`).checked = true;
+
+            // Trigger form section display
+            document.querySelector(`input[value="${orderData.order_type}"]`).dispatchEvent(new Event('change'));
+
+            // Populate states
+            if (orderData.selected_states) {
+                selectedStates = Array.isArray(orderData.selected_states) ? orderData.selected_states : orderData.selected_states.split(', ');
+                updateSelectedStates();
+                updateStateCount();
+            }
+
+            // Populate carriers
+            if (orderData.selected_carriers) {
+                selectedCarriers = Array.isArray(orderData.selected_carriers) ? orderData.selected_carriers : orderData.selected_carriers.split(', ');
+                updateSelectedCarriers();
+            }
+
+            // Populate other fields
+            if (orderData.lead_quantity) {
+                document.querySelector('select[name="leadQuantity"]').value = orderData.lead_quantity;
+            }
+
+            if (orderData.additional_carriers) {
+                document.querySelector('textarea[name="additionalCarriers"]').value = orderData.additional_carriers;
+            }
+
+            // Auto-populate invoice email with user email
+            document.querySelector('input[name="invoiceEmail"]').value = currentUser.email;
+
+            initializeForm();
+        }
+
+        function initializeForm() {
+            // Auto-populate fields with user data
+            if (!document.querySelector('input[name="invoiceEmail"]').value) {
+                document.querySelector('input[name="invoiceEmail"]').value = currentUser.email;
+            }
+
+            // Auto-populate API key
+            if (currentUser.api_key && !document.querySelector('input[name="apiKey"]').value) {
+                document.querySelector('input[name="apiKey"]').value = currentUser.api_key;
+            }
+
+            setupFormEventListeners();
+            setupDropdowns();
+        }
+
+        function setupFormEventListeners() {
+            // Form switching logic
+            document.querySelectorAll('input[name="orderType"]').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    const individualForm = document.getElementById('individualForm');
+                    const agencyForm = document.getElementById('agencyForm');
+                    const commonFields = document.getElementById('commonFields');
+
+                    if (this.value === 'individual') {
+                        individualForm.classList.add('active');
+                        agencyForm.classList.remove('active');
+
+                        // Set required attributes for individual fields
+                        document.querySelectorAll('.individual-field').forEach(field => {
+                            field.setAttribute('required', 'required');
+                        });
+                        // Remove required from agency fields
+                        document.querySelectorAll('.agency-field').forEach(field => {
+                            field.removeAttribute('required');
+                        });
+                    } else {
+                        individualForm.classList.remove('active');
+                        agencyForm.classList.add('active');
+
+                        // Set required attributes for agency fields
+                        document.querySelectorAll('.agency-field').forEach(field => {
+                            field.setAttribute('required', 'required');
+                        });
+                        // Remove required from individual fields
+                        document.querySelectorAll('.individual-field').forEach(field => {
+                            field.removeAttribute('required');
+                        });
+                    }
+
+                    // Set required for common fields when any order type is selected
+                    document.querySelectorAll('.common-field').forEach(field => {
+                        field.setAttribute('required', 'required');
+                    });
+
+                    commonFields.classList.add('active');
+                });
+            });
+
+            // Legal popup validation
+            document.getElementById('legalSignature').addEventListener('input', updateConfirmButton);
+            document.getElementById('agreementCheckbox').addEventListener('change', updateConfirmButton);
+
+            // Form submission
+            document.getElementById('leadOrderForm').addEventListener('submit', handleFormSubmit);
+        }
+
+        function setupDropdowns() {
+            // Initialize states dropdown search
+            const stateSearch = document.getElementById('stateSearch');
+            const stateDropdown = document.getElementById('stateDropdown');
+
+            stateSearch.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                showStateDropdown(searchTerm);
+            });
+
+            stateSearch.addEventListener('click', function() {
+                showStateDropdown('');
+            });
+
+            // Carrier search functionality
+            const carrierSearch = document.getElementById('carrierSearch');
+            const carrierDropdown = document.getElementById('carrierDropdown');
+
+            carrierSearch.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                showCarrierDropdown(searchTerm);
+            });
+
+            carrierSearch.addEventListener('click', function() {
+                showCarrierDropdown('');
+            });
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!carrierSearch.contains(e.target) && !carrierDropdown.contains(e.target)) {
+                    carrierDropdown.style.display = 'none';
+                }
+                if (!stateSearch.contains(e.target) && !stateDropdown.contains(e.target)) {
+                    stateDropdown.style.display = 'none';
+                }
+            });
+        }
+
+        function showStateDropdown(searchTerm = '') {
+            const stateDropdown = document.getElementById('stateDropdown');
+            const filtered = states.filter(state =>
+                (searchTerm === '' || state.toLowerCase().includes(searchTerm)) &&
+                !selectedStates.includes(state)
+            );
+
+            stateDropdown.innerHTML = '';
+            filtered.forEach(state => {
+                const option = document.createElement('div');
+                option.className = 'dropdown-option';
+                option.textContent = state;
+                option.addEventListener('click', () => addState(state));
+                stateDropdown.appendChild(option);
+            });
+
+            stateDropdown.style.display = filtered.length ? 'block' : 'none';
+        }
+
+        function addState(state) {
+            if (!selectedStates.includes(state)) {
+                selectedStates.push(state);
+                updateSelectedStates();
+                updateStateCount();
+            }
+            document.getElementById('stateSearch').value = '';
+            document.getElementById('stateDropdown').style.display = 'none';
+        }
+
+        function removeState(state) {
+            selectedStates = selectedStates.filter(s => s !== state);
+            updateSelectedStates();
+            updateStateCount();
+        }
+
+        function updateSelectedStates() {
+            const container = document.getElementById('selectedStates');
+            container.innerHTML = selectedStates.map(state =>
+                `<span class="item-tag">${state} <span class="remove" onclick="removeState('${state}')">&times;</span></span>`
+            ).join('');
+        }
+
+        function updateStateCount() {
+            document.getElementById('stateCount').textContent = selectedStates.length;
+        }
+
+        function showCarrierDropdown(searchTerm = '') {
+            const carrierDropdown = document.getElementById('carrierDropdown');
+            const filtered = carriers.filter(carrier =>
+                (searchTerm === '' || carrier.toLowerCase().includes(searchTerm)) &&
+                !selectedCarriers.includes(carrier)
+            ).slice(0, 50); // Limit to 50 results for performance
+
+            carrierDropdown.innerHTML = '';
+            filtered.forEach(carrier => {
+                const option = document.createElement('div');
+                option.className = 'dropdown-option';
+                option.textContent = carrier;
+                option.addEventListener('click', () => addCarrier(carrier));
+                carrierDropdown.appendChild(option);
+            });
+
+            carrierDropdown.style.display = filtered.length ? 'block' : 'none';
+        }
+
+        function addCarrier(carrier) {
+            if (!selectedCarriers.includes(carrier)) {
+                selectedCarriers.push(carrier);
+                updateSelectedCarriers();
+            }
+            document.getElementById('carrierSearch').value = '';
+            document.getElementById('carrierDropdown').style.display = 'none';
+        }
+
+        function removeCarrier(carrier) {
+            selectedCarriers = selectedCarriers.filter(c => c !== carrier);
+            updateSelectedCarriers();
+        }
+
+        function updateSelectedCarriers() {
+            const container = document.getElementById('selectedCarriers');
+            container.innerHTML = selectedCarriers.map(carrier =>
+                `<span class="item-tag">${carrier} <span class="remove" onclick="removeCarrier('${carrier}')">&times;</span></span>`
+            ).join('');
+        }
+
+        function updateConfirmButton() {
+            const signature = document.getElementById('legalSignature').value.trim();
+            const agreed = document.getElementById('agreementCheckbox').checked;
+            document.getElementById('confirmSignature').disabled = !(signature && agreed);
+        }
+
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+
+            // Get order type
+            const orderType = document.querySelector('input[name="orderType"]:checked');
+            if (!orderType) {
+                alert('Please select an order type (Individual or Agency NPN).');
+                return;
+            }
+
+            // Validate minimum states
+            if (selectedStates.length < 5) {
+                alert('Please select at least 5 states.');
+                return;
+            }
+
+            // Show legal agreement popup
+            showLegalPopup();
+        }
+
+        function showLegalPopup() {
+            const popup = document.getElementById('legalPopup');
+            popup.classList.add('show');
+            document.body.style.overflow = 'hidden';
+
+            setTimeout(() => {
+                document.getElementById('legalSignature').focus();
+            }, 300);
+        }
+
+        function closeLegalPopup() {
+            const popup = document.getElementById('legalPopup');
+            popup.classList.remove('show');
+            document.body.style.overflow = 'auto';
+
+            document.getElementById('legalSignature').value = '';
+            document.getElementById('agreementCheckbox').checked = false;
+            updateConfirmButton();
+        }
+
+        async function confirmSignature() {
+            const signature = document.getElementById('legalSignature').value.trim();
+            const agreed = document.getElementById('agreementCheckbox').checked;
+
+            if (!signature || !agreed) {
+                alert('Please provide your signature and check the agreement checkbox.');
+                return;
+            }
+
+            await submitForm(signature);
+        }
+
+        async function submitForm(signature) {
+            const form = document.getElementById('leadOrderForm');
+            const formData = new FormData(form);
+
+            const orderType = document.querySelector('input[name="orderType"]:checked').value;
+
+            try {
+                // Prepare order data
+                const orderData = {
+                    user_id: currentUser.id,
+                    order_type: orderType,
+                    location_id: currentUser.location_id,
+                    selected_states: selectedStates,
+                    state_count: selectedStates.length,
+                    selected_carriers: selectedCarriers,
+                    legal_signature: signature,
+                    signature_date: new Date().toISOString().split('T')[0]
+                };
+
+                // Add form fields to order data
+                for (let [key, value] of formData.entries()) {
+                    if (value && (!key.includes('_') || key.startsWith(orderType + '_'))) {
+                        const cleanKey = key.replace(orderType + '_', '');
+                        orderData[cleanKey] = value;
+                    }
+                }
+
+                // Save to database
+                const { data: savedOrder, error: dbError } = await supabase
+                    .from('orders')
+                    .insert([orderData])
+                    .select()
+                    .single();
+
+                if (dbError) throw dbError;
+
+                // Submit to webhook (existing functionality)
+                const webhookData = {
+                    ...orderData,
+                    timestamp: new Date().toISOString(),
+                    signatureDate: new Date().toLocaleDateString(),
+                    selectedStates: selectedStates.join(', '),
+                    selectedCarriers: selectedCarriers.join(', '),
+                    carrierCount: selectedCarriers.length
+                };
+
+                await fetch('https://services.leadconnectorhq.com/hooks/3pOp4wsPz7lig0Fx6itH/webhook-trigger/25d08886-9569-410a-a7ad-d13d208f02a1', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(webhookData)
+                });
+
+                closeLegalPopup();
+                showConfirmation(savedOrder);
+
+            } catch (error) {
+                console.error('Error:', error);
+                alert('There was an error submitting your order. Please try again or contact support.');
+            }
+        }
+
+        function showConfirmation(orderData) {
+            const leadQuantity = orderData.lead_quantity;
+            const priceMap = {
+                '50': '$1,500',
+                '100': '$3,000',
+                '200': '$6,000',
+                '400': '$12,000'
+            };
+
+            const summaryHtml = `
+                <div class="summary-item">
+                    <span class="summary-label">Order Type:</span>
+                    <span class="summary-value">${orderData.order_type === 'individual' ? 'Individual NPN' : 'Agency NPN'}</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">NPN:</span>
+                    <span class="summary-value">${orderData.npn || orderData.agency_npn}</span>
+                </div>
+                ${orderData.agency_name ? `
+                <div class="summary-item">
+                    <span class="summary-label">Agency Name:</span>
+                    <span class="summary-value">${orderData.agency_name}</span>
+                </div>
+                ` : ''}
+                <div class="summary-item">
+                    <span class="summary-label">Lead Quantity:</span>
+                    <span class="summary-value">${leadQuantity} leads</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Total Amount:</span>
+                    <span class="summary-value" style="font-weight: bold; color: #27ae60;">${priceMap[leadQuantity]}</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">States Selected:</span>
+                    <span class="summary-value">${orderData.state_count} states</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Invoice Email:</span>
+                    <span class="summary-value">${orderData.invoice_email}</span>
+                </div>
+            `;
+
+            document.getElementById('orderSummaryContent').innerHTML = summaryHtml;
+
+            const confirmationPopup = document.getElementById('confirmationPopup');
+            confirmationPopup.classList.add('show');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeConfirmation() {
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+</html>

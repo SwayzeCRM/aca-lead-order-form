@@ -1,0 +1,33 @@
+{
+  "name": "aca-lead-order-form",
+  "version": "1.0.0",
+  "description": "ACA Lead Order Form with user authentication, admin dashboard, and GoHighLevel integration",
+  "main": "index.html",
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "echo 'Static site - no build needed'",
+    "deploy": "vercel --prod"
+  },
+  "dependencies": {
+    "@gohighlevel/api-client": "^1.0.0"
+  },
+  "devDependencies": {
+    "vercel": "^32.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/aca-lead-order-form.git"
+  },
+  "keywords": [
+    "order-form",
+    "supabase",
+    "gohighlevel",
+    "admin-dashboard",
+    "authentication"
+  ],
+  "author": "Tim James",
+  "license": "MIT"
+}
