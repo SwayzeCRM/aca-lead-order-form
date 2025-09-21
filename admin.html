@@ -1682,7 +1682,9 @@
                 localStorage.setItem('pendingImpersonation', JSON.stringify(impersonationData));
 
                 // Redirect to user dashboard with special parameter
-                window.location.href = `index.html?impersonate=${userId}&admin=${currentUser.id}`;
+                const redirectUrl = `index.html?impersonate=${userId}&admin=${currentUser.id}`;
+                console.log('Redirecting to:', redirectUrl);
+                window.location.href = redirectUrl;
 
             } catch (error) {
                 console.error('Error starting impersonation:', error);

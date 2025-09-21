@@ -840,6 +840,7 @@
 
             // Check for impersonation mode first
             if ((impersonateUserId && adminId) || pendingImpersonation) {
+                console.log('Impersonation detected on dashboard:', { impersonateUserId, adminId, pendingImpersonation });
                 return await handleImpersonationAuth(impersonateUserId, adminId, pendingImpersonation);
             }
 
