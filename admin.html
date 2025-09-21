@@ -621,6 +621,7 @@
                         <button class="action-btn btn-warning" onclick="testContactsAPI()">Test Contacts API</button>
                         <button class="action-btn btn-success" onclick="testOpportunitiesAPI()">Test Opportunities API</button>
                         <button class="action-btn" style="background: #9b59b6; color: white;" onclick="testTagsAPI()">Test Tags API</button>
+                        <button class="action-btn" style="background: #e67e22; color: white;" onclick="debugFieldMappingAPI()">Debug Field Mapping API</button>
                     </div>
                     <div id="privateTokenResult" style="margin-top: 15px; padding: 12px; border-radius: 4px; display: none;"></div>
                 </div>
@@ -2337,6 +2338,75 @@ Note: This is a simulation. Real orders will trigger actual GoHighLevel API call
         // Field Mapping Modal Functions
         let ghlCustomFields = [];
 
+        async function debugFieldMappingAPI() {
+            const privateToken = document.getElementById('ghlPrivateToken').value;
+            const locationId = document.getElementById('ghlLocationId').value;
+
+            console.log('🔍 Debugging Field Mapping API...');
+            showPrivateTokenResult('🔍 Testing field mapping API endpoint...', 'info');
+
+            try {
+                // Test GET request first
+                console.log('Testing GET request to /api/ghl/get-custom-fields');
+                const getResponse = await fetch('/api/ghl/get-custom-fields', {
+                    method: 'GET'
+                });
+
+                const getResponseText = await getResponse.text();
+                console.log('GET Response:', {
+                    status: getResponse.status,
+                    headers: Object.fromEntries(getResponse.headers.entries()),
+                    body: getResponseText
+                });
+
+                if (!privateToken || !locationId) {
+                    showPrivateTokenResult('✅ GET test successful. Please add Private Token and Location ID to test POST.', 'success');
+                    return;
+                }
+
+                // Test POST request
+                console.log('Testing POST request to /api/ghl/get-custom-fields');
+                const postResponse = await fetch('/api/ghl/get-custom-fields', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        privateToken,
+                        locationId
+                    })
+                });
+
+                const postResponseText = await postResponse.text();
+                console.log('POST Response:', {
+                    status: postResponse.status,
+                    headers: Object.fromEntries(postResponse.headers.entries()),
+                    body: postResponseText
+                });
+
+                let resultMessage = `GET Status: ${getResponse.status}\nPOST Status: ${postResponse.status}\n\n`;
+                resultMessage += `POST Response Preview: ${postResponseText.substring(0, 300)}...`;
+
+                if (postResponse.ok && postResponseText.trim()) {
+                    try {
+                        const data = JSON.parse(postResponseText);
+                        resultMessage += `\n\n✅ JSON parsed successfully!\nCustom fields found: ${data.customFields ? data.customFields.length : 0}`;
+                        showPrivateTokenResult(resultMessage, 'success');
+                    } catch (e) {
+                        resultMessage += `\n\n❌ JSON parsing failed: ${e.message}`;
+                        showPrivateTokenResult(resultMessage, 'error');
+                    }
+                } else {
+                    resultMessage += `\n\n❌ API call failed or returned empty response`;
+                    showPrivateTokenResult(resultMessage, 'error');
+                }
+
+            } catch (error) {
+                console.error('Debug API Test Error:', error);
+                showPrivateTokenResult(`❌ Debug test failed: ${error.message}`, 'error');
+            }
+        }
+
         async function openFieldMappingModal() {
             const privateToken = document.getElementById('ghlPrivateToken').value;
             const locationId = document.getElementById('ghlLocationId').value;
@@ -2359,26 +2429,33 @@ Note: This is a simulation. Real orders will trigger actual GoHighLevel API call
                     })
                 });
 
-                // Check if response is ok before parsing JSON
+                // Get response as text first to debug what we're getting
+                const responseText = await response.text();
+                console.log('Field mapping response status:', response.status);
+                console.log('Field mapping response body (raw):', responseText);
+
+                // Check if response is ok
                 if (!response.ok) {
-                    const errorText = await response.text();
                     console.error('API Response Error:', {
                         status: response.status,
                         statusText: response.statusText,
                         url: response.url,
-                        body: errorText
+                        body: responseText
                     });
-                    throw new Error(`API request failed: ${response.status} ${response.statusText} - ${errorText}`);
+                    throw new Error(`API request failed: ${response.status} ${response.statusText} - ${responseText}`);
                 }
 
+                // Try to parse JSON
                 let data;
                 try {
-                    data = await response.json();
+                    if (!responseText || responseText.trim() === '') {
+                        throw new Error('Empty response from API');
+                    }
+                    data = JSON.parse(responseText);
                 } catch (jsonError) {
                     console.error('JSON parsing failed:', jsonError);
-                    const responseText = await response.text();
-                    console.error('Response body:', responseText);
-                    throw new Error(`Invalid JSON response from API: ${jsonError.message}`);
+                    console.error('Response body that failed to parse:', responseText);
+                    throw new Error(`Invalid JSON response from API: ${jsonError.message}. Response was: ${responseText.substring(0, 200)}...`);
                 }
 
                 if (data.success && data.customFields) {
