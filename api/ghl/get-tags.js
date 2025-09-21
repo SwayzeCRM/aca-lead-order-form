@@ -1,4 +1,4 @@
-// Get custom fields from GoHighLevel
+// Get tags from GoHighLevel
 export default async function handler(req, res) {
   // Enable CORS for your domain
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -23,8 +23,8 @@ export default async function handler(req, res) {
       });
     }
 
-    // Get custom fields from GoHighLevel - using the contacts custom fields endpoint
-    const response = await fetch(`https://services.leadconnectorhq.com/custom-fields/?objectKey=contact&locationId=${locationId}`, {
+    // Get tags from GoHighLevel - using the corrected tags endpoint
+    const response = await fetch(`https://services.leadconnectorhq.com/locations/${locationId}/tags`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${privateToken}`,
@@ -40,24 +40,24 @@ export default async function handler(req, res) {
     const data = await response.json();
 
     // Log the response for debugging
-    console.log('Custom Fields API response:', data);
+    console.log('Tags API response:', data);
 
     // Handle different possible response structures
-    const customFields = data.customFields || data.fields || data || [];
+    const tags = data.tags || data || [];
 
     res.status(200).json({
       success: true,
-      customFields: customFields,
-      message: `Found ${customFields.length || 0} custom fields`,
+      tags: tags,
+      message: `Found ${tags.length || 0} tags`,
       debug: data // Include raw response for debugging
     });
 
   } catch (error) {
-    console.error('Custom fields API error:', error);
+    console.error('Tags API error:', error);
 
     res.status(500).json({
       success: false,
-      message: `❌ Failed to fetch custom fields: ${error.message}`,
+      message: `❌ Failed to fetch tags: ${error.message}`,
       error: error.message
     });
   }

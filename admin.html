@@ -1851,7 +1851,7 @@ Note: This is a simulation. Real orders will trigger actual GoHighLevel API call
                 const data = await response.json();
 
                 if (data.success) {
-                    availableCustomFields = data.customFields;
+                    availableCustomFields = data.customFields || [];
 
                     // Standard contact fields
                     const standardFields = [
@@ -1870,9 +1870,11 @@ Note: This is a simulation. Real orders will trigger actual GoHighLevel API call
                     populateFieldDropdown('phoneFieldMapping', allFields, 'phone');
                     populateFieldDropdown('orderValueFieldMapping', allFields);
 
-                    showWorkflowResult(`✅ Loaded ${data.customFields.length} custom fields + ${standardFields.length} standard fields`, 'success');
+                    showWorkflowResult(`✅ Loaded ${availableCustomFields.length} custom fields + ${standardFields.length} standard fields`, 'success');
                 } else {
                     showWorkflowResult(data.message, 'error');
+                    // Also log the debug data to console for troubleshooting
+                    console.error('Custom Fields API Error:', data.debug);
                 }
 
             } catch (error) {
@@ -1922,21 +1924,23 @@ Note: This is a simulation. Real orders will trigger actual GoHighLevel API call
                 const data = await response.json();
 
                 if (data.success) {
-                    availablePipelines = data.pipelines;
+                    availablePipelines = data.pipelines || [];
 
                     const select = document.getElementById('pipelineSelect');
                     select.innerHTML = '<option value="">Select pipeline...</option>';
 
-                    data.pipelines.forEach(pipeline => {
+                    availablePipelines.forEach(pipeline => {
                         const option = document.createElement('option');
                         option.value = pipeline.id;
                         option.textContent = pipeline.name;
                         select.appendChild(option);
                     });
 
-                    showWorkflowResult(`✅ Loaded ${data.pipelines.length} pipelines`, 'success');
+                    showWorkflowResult(`✅ Loaded ${availablePipelines.length} pipelines`, 'success');
                 } else {
                     showWorkflowResult(data.message, 'error');
+                    // Also log the debug data to console for troubleshooting
+                    console.error('Pipelines API Error:', data.debug);
                 }
 
             } catch (error) {
@@ -1985,7 +1989,7 @@ Note: This is a simulation. Real orders will trigger actual GoHighLevel API call
 
                 showWorkflowResult('Loading tags...', 'info');
 
-                const response = await fetch('/api/ghl/test-tags', {
+                const response = await fetch('/api/ghl/get-tags', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -1999,11 +2003,12 @@ Note: This is a simulation. Real orders will trigger actual GoHighLevel API call
                 const data = await response.json();
 
                 if (data.success) {
-                    // Assuming the response contains tags data
-                    availableTags = data.data?.tags || [];
+                    availableTags = data.tags || [];
                     showWorkflowResult(`✅ Loaded ${availableTags.length} tags`, 'success');
                 } else {
                     showWorkflowResult(data.message, 'error');
+                    // Also log the debug data to console for troubleshooting
+                    console.error('Tags API Error:', data.debug);
                 }
 
             } catch (error) {

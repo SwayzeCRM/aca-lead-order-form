@@ -23,8 +23,8 @@ export default async function handler(req, res) {
       });
     }
 
-    // Get pipelines from GoHighLevel
-    const response = await fetch(`https://services.leadconnectorhq.com/opportunities/pipelines?locationId=${locationId}`, {
+    // Get pipelines from GoHighLevel - using the opportunities pipeline endpoint
+    const response = await fetch(`https://services.leadconnectorhq.com/pipelines/?locationId=${locationId}`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${privateToken}`,
@@ -39,10 +39,17 @@ export default async function handler(req, res) {
 
     const data = await response.json();
 
+    // Log the response for debugging
+    console.log('Pipelines API response:', data);
+
+    // Handle different possible response structures
+    const pipelines = data.pipelines || data || [];
+
     res.status(200).json({
       success: true,
-      pipelines: data.pipelines || [],
-      message: `Found ${data.pipelines?.length || 0} pipelines`
+      pipelines: pipelines,
+      message: `Found ${pipelines.length || 0} pipelines`,
+      debug: data // Include raw response for debugging
     });
 
   } catch (error) {
