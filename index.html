@@ -583,9 +583,7 @@
         <div id="impersonationBanner" class="impersonation-banner">
             <h3>🔍 Admin Impersonation Mode Active</h3>
             <p>You are currently logged in as <span id="impersonatedUserEmail"></span> for debugging purposes.</p>
-            <button class="return-to-admin-btn" onclick="returnToAdmin()">
-                ← Return to Admin Panel
-            </button>
+            <p style="margin: 0; font-size: 13px; opacity: 0.8;">Close this tab to return to the admin panel.</p>
         </div>
 
         <div class="main-content">
@@ -1041,45 +1039,11 @@
 
             banner.classList.add('active');
             userEmailSpan.textContent = currentUser.email;
+
+            // Set page title to indicate impersonation
+            document.title = `[IMPERSONATING ${currentUser.email}] ACA Lead Order System`;
         }
 
-        async function returnToAdmin() {
-            try {
-                const impersonationState = sessionStorage.getItem('impersonationState');
-                if (!impersonationState) {
-                    alert('No active impersonation session found');
-                    return;
-                }
-
-                const state = JSON.parse(impersonationState);
-
-                // End the impersonation session in database
-                const { error: logError } = await supabase
-                    .from('impersonation_log')
-                    .update({
-                        ended_at: new Date().toISOString(),
-                        is_active: false
-                    })
-                    .eq('admin_id', state.adminData.adminId)
-                    .eq('target_user_id', state.targetUserId)
-                    .eq('is_active', true);
-
-                if (logError) {
-                    console.error('Error ending impersonation log:', logError);
-                }
-
-                // Clear impersonation data
-                sessionStorage.removeItem('impersonationState');
-                localStorage.removeItem('adminImpersonationData');
-
-                // Redirect back to admin panel
-                window.location.href = 'admin.html';
-
-            } catch (error) {
-                console.error('Error returning to admin:', error);
-                alert('Error returning to admin panel: ' + error.message);
-            }
-        }
 
         function showLoginForm() {
             document.getElementById('loadingScreen').style.display = 'none';

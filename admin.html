@@ -1634,7 +1634,7 @@
             }
 
             try {
-                // Store current admin session details for later restoration
+                // Prepare admin data for impersonation logging
                 const currentSession = await supabase.auth.getSession();
                 const adminData = {
                     adminId: currentUser.id,
@@ -1642,9 +1642,6 @@
                     adminSessionId: currentSession.data.session?.access_token,
                     impersonationStarted: new Date().toISOString()
                 };
-
-                // Store in localStorage for the return function
-                localStorage.setItem('adminImpersonationData', JSON.stringify(adminData));
 
                 // Log the impersonation start in database
                 const { error: logError } = await supabase
@@ -1681,23 +1678,12 @@
 
                 localStorage.setItem('pendingImpersonation', JSON.stringify(impersonationData));
 
-                // Redirect to user dashboard with special parameter
+                // Open user dashboard in new tab for impersonation
                 const redirectUrl = `index.html?impersonate=${userId}&admin=${currentUser.id}`;
-                console.log('Redirecting to:', redirectUrl);
+                console.log('Opening impersonation in new tab:', redirectUrl);
 
-                // Check if we're in an iframe and handle accordingly
-                if (window.self !== window.top) {
-                    console.log('Running in iframe, attempting parent window navigation');
-                    try {
-                        window.top.location.href = redirectUrl;
-                    } catch (e) {
-                        console.log('Cannot access parent window, using current window');
-                        window.location.href = redirectUrl;
-                    }
-                } else {
-                    console.log('Running in normal window');
-                    window.location.href = redirectUrl;
-                }
+                // Open in new tab - this works in all environments including iframes
+                window.open(redirectUrl, '_blank');
 
             } catch (error) {
                 console.error('Error starting impersonation:', error);
