@@ -1,9 +1,10 @@
 <!DOCTYPE html>
+<!-- Cache Buster v2025.01.21-16:45 - Fixed urlParams declarations -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ACA Lead Order Form</title>
+    <title>ACA Lead Order Form - v2025.01.21</title>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <style>
         * {
@@ -1310,6 +1311,7 @@
         }
 
         async function initializeAuth() {
+            console.log('=== INIT AUTH DEBUG v2025.01.21-16:45 ===');
             // Check for impersonation mode first
             const urlParams = new URLSearchParams(window.location.search);
             const impersonateUserId = urlParams.get('impersonate');
@@ -1364,6 +1366,7 @@
         }
 
         async function loadFormData() {
+            console.log('=== LOAD FORM DATA DEBUG v2025.01.21-16:45 ===');
             const urlParams = new URLSearchParams(window.location.search);
 
             // Handle repeat order
