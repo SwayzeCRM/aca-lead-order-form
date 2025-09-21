@@ -839,6 +839,13 @@
                             <label for="agency">Agency NPN</label>
                         </div>
                     </div>
+
+                    <!-- Continue Button (appears after selection) -->
+                    <div id="continueButtonContainer" style="display: none; margin-top: 24px; text-align: center;">
+                        <button type="button" id="continueButton" class="action-btn" style="background: #2980b9; color: white; padding: 12px 32px; border: none; border-radius: 4px; font-size: 16px; cursor: pointer;">
+                            Continue to Form →
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Individual NPN Form -->
@@ -1129,6 +1136,7 @@
             await initializeAuth();
             await loadFormData();
             initializePurchasingForLogic();
+            initializeOrderTypeLogic();
         });
 
         // Impersonation Management Functions
@@ -1155,6 +1163,53 @@
 
             // Handle location validation
             validateLocationBtn.addEventListener('click', validateLocationId);
+        }
+
+        // Initialize order type selection logic
+        function initializeOrderTypeLogic() {
+            const orderTypeRadios = document.querySelectorAll('input[name="orderType"]');
+            const continueButtonContainer = document.getElementById('continueButtonContainer');
+            const continueButton = document.getElementById('continueButton');
+            const individualForm = document.getElementById('individualForm');
+            const agencyForm = document.getElementById('agencyForm');
+
+            // Handle order type radio button changes
+            orderTypeRadios.forEach(radio => {
+                radio.addEventListener('change', function() {
+                    // Show continue button when any option is selected
+                    continueButtonContainer.style.display = 'block';
+
+                    // Hide all form sections initially
+                    individualForm.classList.remove('active');
+                    agencyForm.classList.remove('active');
+                });
+            });
+
+            // Handle continue button click
+            continueButton.addEventListener('click', function() {
+                const selectedOrderType = document.querySelector('input[name="orderType"]:checked');
+
+                if (!selectedOrderType) {
+                    alert('Please select an order type first.');
+                    return;
+                }
+
+                // Show the appropriate form section
+                if (selectedOrderType.value === 'individual') {
+                    individualForm.classList.add('active');
+                    agencyForm.classList.remove('active');
+                } else if (selectedOrderType.value === 'agency') {
+                    agencyForm.classList.add('active');
+                    individualForm.classList.remove('active');
+                }
+
+                // Scroll to the form section
+                const activeForm = selectedOrderType.value === 'individual' ? individualForm : agencyForm;
+                activeForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+                // Hide the continue button after clicking
+                continueButtonContainer.style.display = 'none';
+            });
         }
 
         // Validate Location ID with GoHighLevel API
