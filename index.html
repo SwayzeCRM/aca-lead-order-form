@@ -48,6 +48,59 @@
             font-size: 16px;
         }
 
+        /* Impersonation Banner Styles */
+        .impersonation-banner {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+            padding: 16px 40px;
+            text-align: center;
+            border-bottom: 2px solid #a93226;
+            display: none;
+            position: relative;
+            animation: slideDown 0.3s ease-out;
+        }
+
+        @keyframes slideDown {
+            from { transform: translateY(-100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .impersonation-banner.active {
+            display: block;
+        }
+
+        .impersonation-banner h3 {
+            margin: 0 0 8px 0;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .impersonation-banner p {
+            margin: 0 0 12px 0;
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .return-to-admin-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .return-to-admin-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+            color: white;
+            text-decoration: none;
+        }
+
         .user-info {
             position: absolute;
             top: 20px;
@@ -526,6 +579,15 @@
             </div>
         </div>
 
+        <!-- Impersonation Banner (shown when admin is impersonating a user) -->
+        <div id="impersonationBanner" class="impersonation-banner">
+            <h3>🔍 Admin Impersonation Mode Active</h3>
+            <p>You are currently logged in as <span id="impersonatedUserEmail"></span> for debugging purposes.</p>
+            <button class="return-to-admin-btn" onclick="returnToAdmin()">
+                ← Return to Admin Panel
+            </button>
+        </div>
+
         <div class="main-content">
             <!-- Loading Screen -->
             <div id="loadingScreen" class="loading">
@@ -691,10 +753,95 @@
             document.getElementById('setupForm').addEventListener('submit', handleSetupSubmit);
         }
 
+        async function handleImpersonationAuth(impersonateUserId, adminId, pendingData) {
+            try {
+                let targetUserId, targetUserEmail, adminData;
+
+                if (pendingData) {
+                    const impersonationData = JSON.parse(pendingData);
+                    targetUserId = impersonationData.targetUserId;
+                    targetUserEmail = impersonationData.targetUserEmail;
+                    adminData = impersonationData;
+                    localStorage.removeItem('pendingImpersonation');
+                } else {
+                    targetUserId = impersonateUserId;
+                }
+
+                // Get current session token if available
+                let authHeaders = {
+                    'Content-Type': 'application/json'
+                };
+
+                try {
+                    const { data: { session } } = await supabase.auth.getSession();
+                    if (session && session.access_token) {
+                        authHeaders['Authorization'] = `Bearer ${session.access_token}`;
+                    }
+                } catch (e) {
+                    console.log('No current session for auth header');
+                }
+
+                // Get target user data using the impersonation API endpoint
+                const response = await fetch('/api/admin/get-user-for-impersonation', {
+                    method: 'POST',
+                    headers: authHeaders,
+                    body: JSON.stringify({
+                        userId: targetUserId
+                    })
+                });
+
+                const userData = await response.json();
+
+                if (!userData.success) {
+                    console.error('Error loading target user:', userData.error);
+                    alert('Failed to load user data for impersonation: ' + userData.error);
+                    window.location.href = 'admin.html';
+                    return false;
+                }
+
+                const targetUser = userData.user;
+
+                // Set up the impersonation session
+                currentUser = targetUser;
+
+                // Store impersonation state
+                const impersonationState = {
+                    isImpersonating: true,
+                    targetUserId: targetUser.id,
+                    targetUserEmail: targetUser.email,
+                    adminData: adminData || { adminId, adminEmail: 'Admin', impersonationStarted: new Date().toISOString() }
+                };
+
+                sessionStorage.setItem('impersonationState', JSON.stringify(impersonationState));
+
+                console.log('Impersonation mode active on dashboard:', targetUser.email);
+
+                // Show the dashboard as the impersonated user
+                showDashboard();
+                addImpersonationBanner();
+
+                return true;
+
+            } catch (error) {
+                console.error('Error in impersonation auth:', error);
+                alert('Failed to set up impersonation mode: ' + error.message);
+                window.location.href = 'admin.html';
+                return false;
+            }
+        }
+
         async function initializeAuth() {
             const urlParams = new URLSearchParams(window.location.search);
             const email = urlParams.get('email');
             const locationId = urlParams.get('location_id');
+            const impersonateUserId = urlParams.get('impersonate');
+            const adminId = urlParams.get('admin');
+            const pendingImpersonation = localStorage.getItem('pendingImpersonation');
+
+            // Check for impersonation mode first
+            if ((impersonateUserId && adminId) || pendingImpersonation) {
+                return await handleImpersonationAuth(impersonateUserId, adminId, pendingImpersonation);
+            }
 
             if (email && locationId) {
                 // Auto-login with URL parameters
@@ -885,6 +1032,52 @@
             await supabase.auth.signOut();
             currentUser = null;
             showLoginForm();
+        }
+
+        function addImpersonationBanner() {
+            const banner = document.getElementById('impersonationBanner');
+            const userEmailSpan = document.getElementById('impersonatedUserEmail');
+
+            banner.classList.add('active');
+            userEmailSpan.textContent = currentUser.email;
+        }
+
+        async function returnToAdmin() {
+            try {
+                const impersonationState = sessionStorage.getItem('impersonationState');
+                if (!impersonationState) {
+                    alert('No active impersonation session found');
+                    return;
+                }
+
+                const state = JSON.parse(impersonationState);
+
+                // End the impersonation session in database
+                const { error: logError } = await supabase
+                    .from('impersonation_log')
+                    .update({
+                        ended_at: new Date().toISOString(),
+                        is_active: false
+                    })
+                    .eq('admin_id', state.adminData.adminId)
+                    .eq('target_user_id', state.targetUserId)
+                    .eq('is_active', true);
+
+                if (logError) {
+                    console.error('Error ending impersonation log:', logError);
+                }
+
+                // Clear impersonation data
+                sessionStorage.removeItem('impersonationState');
+                localStorage.removeItem('adminImpersonationData');
+
+                // Redirect back to admin panel
+                window.location.href = 'admin.html';
+
+            } catch (error) {
+                console.error('Error returning to admin:', error);
+                alert('Error returning to admin panel: ' + error.message);
+            }
         }
 
         function showLoginForm() {
