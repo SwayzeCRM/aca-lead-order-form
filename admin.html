@@ -1706,8 +1706,10 @@
             }
         }
 
-        // User Impersonation Functions
+        // User Impersonation Functions v2024.1
         async function loginAsUser(userId, userEmail) {
+            console.log('New impersonation function called - v2024.1');
+
             // Generate impersonation URL
             const impersonationUrl = `${window.location.origin}/index.html?impersonate=${userId}&admin=${currentUser.id}`;
 
