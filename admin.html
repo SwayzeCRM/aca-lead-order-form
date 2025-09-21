@@ -666,9 +666,6 @@
                                     </select>
                                 </div>
                             </div>
-                            <button class="action-btn" style="margin-top: 12px; background: #6c757d;" onclick="loadCustomFields()">
-                                🔄 Load GoHighLevel Fields
-                            </button>
                         </div>
                     </div>
 
@@ -697,9 +694,6 @@
                                     </select>
                                 </div>
                             </div>
-                            <button class="action-btn" style="background: #6c757d;" onclick="loadPipelines()">
-                                🔄 Load Pipelines
-                            </button>
                         </div>
                     </div>
 
@@ -724,9 +718,6 @@
                             </div>
                             <div id="selectedTags" style="margin-top: 8px; display: flex; flex-wrap: gap: 6px;">
                             </div>
-                            <button class="action-btn" style="margin-top: 12px; background: #6c757d;" onclick="loadTags()">
-                                🔄 Load Tags
-                            </button>
                         </div>
                     </div>
 
@@ -1225,6 +1216,14 @@
                     } catch (e) {
                         selectedWorkflowTags = [];
                     }
+                }
+
+                // Auto-load GoHighLevel data if token and location ID are available
+                const hasCredentials = settingsMap.ghl_private_token && settingsMap.ghl_location_id;
+                if (hasCredentials) {
+                    setTimeout(() => {
+                        loadGoHighLevelData();
+                    }, 500); // Small delay to ensure UI is ready
                 }
 
             } catch (error) {
@@ -1824,6 +1823,25 @@ Note: This is a simulation. Real orders will trigger actual GoHighLevel API call
             }
         }
 
+        // Auto-load all GoHighLevel data
+        async function loadGoHighLevelData() {
+            try {
+                showWorkflowResult('Loading GoHighLevel data...', 'info');
+
+                // Load all data in parallel for better performance
+                await Promise.all([
+                    loadCustomFields(),
+                    loadPipelines(),
+                    loadTags()
+                ]);
+
+                showWorkflowResult('✅ GoHighLevel data loaded successfully!', 'success');
+            } catch (error) {
+                console.error('Error loading GoHighLevel data:', error);
+                showWorkflowResult('❌ Error loading GoHighLevel data: ' + error.message, 'error');
+            }
+        }
+
         // Load GoHighLevel Data Functions
         async function loadCustomFields() {
             try {
@@ -1831,11 +1849,8 @@ Note: This is a simulation. Real orders will trigger actual GoHighLevel API call
                 const locationId = document.getElementById('ghlLocationId').value;
 
                 if (!privateToken || !locationId) {
-                    showWorkflowResult('❌ Please configure Private Integration Token and Location ID first', 'error');
-                    return;
+                    return; // Silently fail if no credentials
                 }
-
-                showWorkflowResult('Loading custom fields...', 'info');
 
                 const response = await fetch('/api/ghl/get-custom-fields', {
                     method: 'POST',
@@ -1870,16 +1885,15 @@ Note: This is a simulation. Real orders will trigger actual GoHighLevel API call
                     populateFieldDropdown('phoneFieldMapping', allFields, 'phone');
                     populateFieldDropdown('orderValueFieldMapping', allFields);
 
-                    showWorkflowResult(`✅ Loaded ${availableCustomFields.length} custom fields + ${standardFields.length} standard fields`, 'success');
+                    console.log(`✅ Loaded ${availableCustomFields.length} custom fields + ${standardFields.length} standard fields`);
                 } else {
-                    showWorkflowResult(data.message, 'error');
-                    // Also log the debug data to console for troubleshooting
-                    console.error('Custom Fields API Error:', data.debug);
+                    console.error('Custom Fields API Error:', data.message, data.debug);
+                    throw new Error(data.message);
                 }
 
             } catch (error) {
                 console.error('Error loading custom fields:', error);
-                showWorkflowResult('❌ Error loading custom fields: ' + error.message, 'error');
+                throw error; // Re-throw for parent function to handle
             }
         }
 
@@ -1904,11 +1918,8 @@ Note: This is a simulation. Real orders will trigger actual GoHighLevel API call
                 const locationId = document.getElementById('ghlLocationId').value;
 
                 if (!privateToken || !locationId) {
-                    showWorkflowResult('❌ Please configure Private Integration Token and Location ID first', 'error');
-                    return;
+                    return; // Silently fail if no credentials
                 }
-
-                showWorkflowResult('Loading pipelines...', 'info');
 
                 const response = await fetch('/api/ghl/get-pipelines', {
                     method: 'POST',
@@ -1936,16 +1947,15 @@ Note: This is a simulation. Real orders will trigger actual GoHighLevel API call
                         select.appendChild(option);
                     });
 
-                    showWorkflowResult(`✅ Loaded ${availablePipelines.length} pipelines`, 'success');
+                    console.log(`✅ Loaded ${availablePipelines.length} pipelines`);
                 } else {
-                    showWorkflowResult(data.message, 'error');
-                    // Also log the debug data to console for troubleshooting
-                    console.error('Pipelines API Error:', data.debug);
+                    console.error('Pipelines API Error:', data.message, data.debug);
+                    throw new Error(data.message);
                 }
 
             } catch (error) {
                 console.error('Error loading pipelines:', error);
-                showWorkflowResult('❌ Error loading pipelines: ' + error.message, 'error');
+                throw error; // Re-throw for parent function to handle
             }
         }
 
@@ -1983,11 +1993,8 @@ Note: This is a simulation. Real orders will trigger actual GoHighLevel API call
                 const locationId = document.getElementById('ghlLocationId').value;
 
                 if (!privateToken || !locationId) {
-                    showWorkflowResult('❌ Please configure Private Integration Token and Location ID first', 'error');
-                    return;
+                    return; // Silently fail if no credentials
                 }
-
-                showWorkflowResult('Loading tags...', 'info');
 
                 const response = await fetch('/api/ghl/get-tags', {
                     method: 'POST',
@@ -2004,16 +2011,15 @@ Note: This is a simulation. Real orders will trigger actual GoHighLevel API call
 
                 if (data.success) {
                     availableTags = data.tags || [];
-                    showWorkflowResult(`✅ Loaded ${availableTags.length} tags`, 'success');
+                    console.log(`✅ Loaded ${availableTags.length} tags`);
                 } else {
-                    showWorkflowResult(data.message, 'error');
-                    // Also log the debug data to console for troubleshooting
-                    console.error('Tags API Error:', data.debug);
+                    console.error('Tags API Error:', data.message, data.debug);
+                    throw new Error(data.message);
                 }
 
             } catch (error) {
                 console.error('Error loading tags:', error);
-                showWorkflowResult('❌ Error loading tags: ' + error.message, 'error');
+                throw error; // Re-throw for parent function to handle
             }
         }
 
