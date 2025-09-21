@@ -1671,15 +1671,8 @@
 
                 if (userError) throw userError;
 
-                // Sign out current admin session
-                await supabase.auth.signOut();
-
-                // Create a new session for the target user
-                // Note: This is a simplified approach. In production, you might want
-                // to use Supabase Admin API to generate a session token
-
-                // For now, we'll use a different approach: store impersonation data
-                // and redirect to a special URL that handles the impersonation
+                // Don't sign out admin session yet - keep it for the impersonation API call
+                // Store impersonation data and redirect
                 const impersonationData = {
                     ...adminData,
                     targetUserId: userId,

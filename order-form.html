@@ -1272,15 +1272,26 @@
                     targetUserId = impersonateUserId;
                 }
 
+                // Get current session token if available
+                let authHeaders = {
+                    'Content-Type': 'application/json'
+                };
+
+                try {
+                    const { data: { session } } = await supabase.auth.getSession();
+                    if (session && session.access_token) {
+                        authHeaders['Authorization'] = `Bearer ${session.access_token}`;
+                    }
+                } catch (e) {
+                    console.log('No current session for auth header');
+                }
+
                 // Get target user data using the impersonation API endpoint
                 const response = await fetch('/api/admin/get-user-for-impersonation', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: authHeaders,
                     body: JSON.stringify({
-                        userId: targetUserId,
-                        adminId: adminId || (adminData && adminData.adminId)
+                        userId: targetUserId
                     })
                 });
 
