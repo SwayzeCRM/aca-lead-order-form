@@ -67,8 +67,83 @@
             background: #7f8c8d;
         }
 
+        /* Impersonation Banner Styles */
+        .impersonation-banner {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+            padding: 16px 40px;
+            text-align: center;
+            border-bottom: 2px solid #a93226;
+            display: none;
+            position: relative;
+            animation: slideDown 0.3s ease-out;
+        }
+
+        @keyframes slideDown {
+            from { transform: translateY(-100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .impersonation-banner.active {
+            display: block;
+        }
+
+        .impersonation-banner h3 {
+            margin: 0 0 8px 0;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .impersonation-banner p {
+            margin: 0 0 12px 0;
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .return-to-admin-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .return-to-admin-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+            color: white;
+            text-decoration: none;
+        }
+
+        /* Modify header appearance when impersonating */
+        .header.impersonation-mode {
+            border-left: 4px solid #e74c3c;
+            background: linear-gradient(135deg, #fff, #fdf2f2);
+        }
+
+        .header.impersonation-mode h1:before {
+            content: "🔍 ";
+            color: #e74c3c;
+        }
+
         .form-container {
             padding: 40px;
+        }
+
+        .purchasing-for-selector {
+            margin-bottom: 40px;
+        }
+
+        .purchasing-for-selector h3 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 16px;
         }
 
         .order-type-selector {
@@ -704,8 +779,55 @@
             <a href="index.html" class="back-btn">← Back to Dashboard</a>
         </div>
 
+        <!-- Impersonation Banner (shown when admin is impersonating a user) -->
+        <div id="impersonationBanner" class="impersonation-banner">
+            <h3>🔍 Admin Impersonation Mode Active</h3>
+            <p>You are currently logged in as <span id="impersonatedUserEmail"></span> for debugging purposes.</p>
+            <button class="return-to-admin-btn" onclick="returnToAdmin()">
+                ← Return to Admin Panel
+            </button>
+        </div>
+
         <div class="form-container">
             <form id="leadOrderForm">
+                <!-- Purchasing For Section -->
+                <div class="purchasing-for-selector">
+                    <h3>Who are you purchasing these leads for?</h3>
+                    <div class="radio-group">
+                        <div class="radio-option">
+                            <input type="radio" id="purchaseForSelf" name="purchaseFor" value="self" checked>
+                            <label for="purchaseForSelf">My CRM Account</label>
+                        </div>
+                        <div class="radio-option">
+                            <input type="radio" id="purchaseForOther" name="purchaseFor" value="other">
+                            <label for="purchaseForOther">A Different CRM Account</label>
+                        </div>
+                    </div>
+
+                    <!-- Other CRM Account Section -->
+                    <div id="otherCrmSection" style="display: none; margin-top: 24px; padding: 20px; background: #f8f9fa; border-radius: 6px; border-left: 4px solid #3498db;">
+                        <h4 style="margin: 0 0 16px 0; color: #2c3e50;">Target CRM Account Details</h4>
+
+                        <div class="form-group">
+                            <label>GoHighLevel Location ID <span class="required">*</span></label>
+                            <input type="text" id="targetLocationId" name="targetLocationId" placeholder="Enter the Location ID for the CRM account">
+                            <div class="help-text">This is the GoHighLevel Location ID where the leads will be delivered</div>
+                        </div>
+
+                        <div style="display: flex; gap: 12px; align-items: center; margin-top: 12px;">
+                            <button type="button" id="validateLocationBtn" class="action-btn" style="background: #27ae60; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer;">
+                                Validate Location ID
+                            </button>
+                            <span id="locationValidationStatus" style="font-size: 14px;"></span>
+                        </div>
+
+                        <div id="validatedLocationInfo" style="display: none; margin-top: 16px; padding: 12px; background: #d5f4e6; border-radius: 4px;">
+                            <strong>✓ Validated CRM Account:</strong>
+                            <div id="locationDetails" style="margin-top: 8px; font-size: 14px;"></div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="order-type-selector">
                     <h3>Order Type</h3>
                     <div class="radio-group">
@@ -1001,12 +1123,205 @@
         let selectedStates = [];
         let selectedCarriers = [];
         let currentUser = null;
+        let validatedLocationInfo = null;
 
         // Initialize app
         document.addEventListener('DOMContentLoaded', async function() {
             await initializeAuth();
             await loadFormData();
+            initializePurchasingForLogic();
+            checkImpersonationMode();
         });
+
+        // Impersonation Management Functions
+        function checkImpersonationMode() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const impersonateUserId = urlParams.get('impersonate');
+            const adminId = urlParams.get('admin');
+            const pendingImpersonation = localStorage.getItem('pendingImpersonation');
+
+            if ((impersonateUserId && adminId) || pendingImpersonation) {
+                setupImpersonationMode(impersonateUserId, adminId, pendingImpersonation);
+            }
+        }
+
+        async function setupImpersonationMode(impersonateUserId, adminId, pendingData) {
+            try {
+                let targetUserId, targetUserEmail, adminData;
+
+                if (pendingData) {
+                    const impersonationData = JSON.parse(pendingData);
+                    targetUserId = impersonationData.targetUserId;
+                    targetUserEmail = impersonationData.targetUserEmail;
+                    adminData = impersonationData;
+                    localStorage.removeItem('pendingImpersonation');
+                } else {
+                    targetUserId = impersonateUserId;
+                    // Get user data from URL params or database
+                }
+
+                // Get target user data from database
+                const { data: targetUser, error: userError } = await supabase
+                    .from('users')
+                    .select('*')
+                    .eq('id', targetUserId)
+                    .single();
+
+                if (userError) throw userError;
+
+                // Set up the impersonation session
+                currentUser = targetUser;
+
+                // Show impersonation banner
+                const banner = document.getElementById('impersonationBanner');
+                const userEmailSpan = document.getElementById('impersonatedUserEmail');
+                const header = document.querySelector('.header');
+
+                banner.classList.add('active');
+                userEmailSpan.textContent = targetUser.email;
+                header.classList.add('impersonation-mode');
+
+                // Store impersonation state
+                const impersonationState = {
+                    isImpersonating: true,
+                    targetUserId: targetUser.id,
+                    targetUserEmail: targetUser.email,
+                    adminData: adminData || { adminId, adminEmail: 'Admin', impersonationStarted: new Date().toISOString() }
+                };
+
+                sessionStorage.setItem('impersonationState', JSON.stringify(impersonationState));
+
+                console.log('Impersonation mode active:', targetUser.email);
+
+            } catch (error) {
+                console.error('Error setting up impersonation mode:', error);
+                alert('Failed to set up impersonation mode: ' + error.message);
+            }
+        }
+
+        async function returnToAdmin() {
+            try {
+                const impersonationState = sessionStorage.getItem('impersonationState');
+                if (!impersonationState) {
+                    alert('No active impersonation session found');
+                    return;
+                }
+
+                const state = JSON.parse(impersonationState);
+
+                // End the impersonation session in database
+                const { error: logError } = await supabase
+                    .from('impersonation_log')
+                    .update({
+                        ended_at: new Date().toISOString(),
+                        is_active: false
+                    })
+                    .eq('admin_id', state.adminData.adminId)
+                    .eq('target_user_id', state.targetUserId)
+                    .eq('is_active', true);
+
+                if (logError) {
+                    console.error('Error ending impersonation log:', logError);
+                }
+
+                // Clear impersonation data
+                sessionStorage.removeItem('impersonationState');
+                localStorage.removeItem('adminImpersonationData');
+
+                // Redirect back to admin panel
+                window.location.href = 'admin.html';
+
+            } catch (error) {
+                console.error('Error returning to admin:', error);
+                alert('Error returning to admin panel: ' + error.message);
+            }
+        }
+
+        // Initialize purchasing for logic
+        function initializePurchasingForLogic() {
+            const purchaseForRadios = document.querySelectorAll('input[name="purchaseFor"]');
+            const otherCrmSection = document.getElementById('otherCrmSection');
+            const validateLocationBtn = document.getElementById('validateLocationBtn');
+
+            // Handle radio button changes
+            purchaseForRadios.forEach(radio => {
+                radio.addEventListener('change', function() {
+                    if (this.value === 'other') {
+                        otherCrmSection.style.display = 'block';
+                    } else {
+                        otherCrmSection.style.display = 'none';
+                        validatedLocationInfo = null;
+                        document.getElementById('validatedLocationInfo').style.display = 'none';
+                    }
+                });
+            });
+
+            // Handle location validation
+            validateLocationBtn.addEventListener('click', validateLocationId);
+        }
+
+        // Validate Location ID with GoHighLevel API
+        async function validateLocationId() {
+            const locationId = document.getElementById('targetLocationId').value;
+            const statusElement = document.getElementById('locationValidationStatus');
+            const validatedInfoDiv = document.getElementById('validatedLocationInfo');
+            const locationDetailsDiv = document.getElementById('locationDetails');
+            const validateBtn = document.getElementById('validateLocationBtn');
+
+            if (!locationId) {
+                statusElement.textContent = 'Please enter a Location ID';
+                statusElement.style.color = '#e74c3c';
+                return;
+            }
+
+            try {
+                validateBtn.disabled = true;
+                validateBtn.textContent = 'Validating...';
+                statusElement.textContent = 'Validating location...';
+                statusElement.style.color = '#f39c12';
+
+                // Use admin's PIT token to validate the location
+                const response = await fetch('/api/ghl/validate-location', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        locationId: locationId
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.location) {
+                    validatedLocationInfo = data.location;
+                    statusElement.textContent = '✓ Valid Location ID';
+                    statusElement.style.color = '#27ae60';
+
+                    locationDetailsDiv.innerHTML = `
+                        <strong>Business:</strong> ${data.location.name || 'Unknown'}<br>
+                        <strong>Location ID:</strong> ${locationId}<br>
+                        <strong>Address:</strong> ${data.location.address || 'Not provided'}
+                    `;
+                    validatedInfoDiv.style.display = 'block';
+                } else {
+                    statusElement.textContent = '✗ Invalid Location ID';
+                    statusElement.style.color = '#e74c3c';
+                    validatedInfoDiv.style.display = 'none';
+                    validatedLocationInfo = null;
+                }
+
+            } catch (error) {
+                console.error('Location validation error:', error);
+                statusElement.textContent = '✗ Validation failed';
+                statusElement.style.color = '#e74c3c';
+                validatedInfoDiv.style.display = 'none';
+                validatedLocationInfo = null;
+            } finally {
+                validateBtn.disabled = false;
+                validateBtn.textContent = 'Validate Location ID';
+            }
+        }
 
         async function initializeAuth() {
             const { data: { session } } = await supabase.auth.getSession();
@@ -1032,7 +1347,11 @@
             currentUser = userData;
 
             // Check if user is admin first, before API key requirement
-            if (currentUser.role === 'admin') {
+            // Skip admin redirect if we're in impersonation mode
+            const urlParams = new URLSearchParams(window.location.search);
+            const isImpersonating = urlParams.get('impersonate') || sessionStorage.getItem('impersonationState');
+
+            if (currentUser.role === 'admin' && !isImpersonating) {
                 console.log('Admin user detected, redirecting to admin dashboard');
                 window.location.href = 'admin.html';
                 return;
@@ -1399,6 +1718,8 @@
             const formData = new FormData(form);
 
             const orderType = document.querySelector('input[name="orderType"]:checked').value;
+            const purchaseFor = document.querySelector('input[name="purchaseFor"]:checked').value;
+            const otherLocationId = document.getElementById('otherLocationId').value;
 
             try {
                 // Prepare order data
@@ -1412,6 +1733,17 @@
                     legal_signature: signature,
                     signature_date: new Date().toISOString().split('T')[0]
                 };
+
+                // Handle purchasing for others
+                if (purchaseFor === 'other' && otherLocationId) {
+                    orderData.purchased_for_location_id = otherLocationId;
+                    orderData.buyer_id = currentUser.id;
+                    orderData.is_purchased_for_other = true;
+                } else {
+                    orderData.purchased_for_location_id = null;
+                    orderData.buyer_id = null;
+                    orderData.is_purchased_for_other = false;
+                }
 
                 // Add form fields to order data
                 for (let [key, value] of formData.entries()) {
@@ -1429,6 +1761,42 @@
                     .single();
 
                 if (dbError) throw dbError;
+
+                // If purchasing for others, promote user to buyer role and create relationship
+                if (purchaseFor === 'other' && otherLocationId) {
+                    // Promote user to buyer role
+                    const { error: roleError } = await supabase
+                        .from('users')
+                        .update({ role: 'buyer' })
+                        .eq('id', currentUser.id);
+
+                    if (roleError) {
+                        console.error('Error promoting user to buyer:', roleError);
+                    } else {
+                        console.log('User promoted to buyer role');
+                        currentUser.role = 'buyer';
+                    }
+
+                    // Create or update buyer relationship
+                    const { error: relationshipError } = await supabase
+                        .from('buyer_relationships')
+                        .upsert({
+                            buyer_id: currentUser.id,
+                            location_id: otherLocationId,
+                            location_name: validatedLocationInfo?.name || 'Unknown Location',
+                            relationship_type: 'client',
+                            is_active: true,
+                            created_by: currentUser.id
+                        }, {
+                            onConflict: 'buyer_id,location_id'
+                        });
+
+                    if (relationshipError) {
+                        console.error('Error creating buyer relationship:', relationshipError);
+                    } else {
+                        console.log('Buyer relationship created/updated');
+                    }
+                }
 
                 // Submit to webhook (existing functionality)
                 const webhookData = {

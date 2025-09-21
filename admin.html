@@ -254,6 +254,15 @@
             background: #e67e22;
         }
 
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
         .btn-danger {
             background: #e74c3c;
             color: white;
@@ -1123,6 +1132,10 @@
                                     onclick="toggleUserStatus('${user.id}', ${user.is_active !== false})">
                                 ${user.is_active !== false ? 'Deactivate' : 'Activate'}
                             </button>
+                            <button class="action-btn btn-secondary" onclick="loginAsUser('${user.id}', '${user.email}')"
+                                    title="Login as this user for debugging">
+                                Login As
+                            </button>
                         </td>
                     </tr>
                 `).join('');
@@ -1611,6 +1624,76 @@
             } catch (error) {
                 console.error('Error toggling user status:', error);
                 alert('Error updating user status');
+            }
+        }
+
+        // User Impersonation Functions
+        async function loginAsUser(userId, userEmail) {
+            if (!confirm(`Are you sure you want to login as "${userEmail}"?\n\nThis will:\n- Log you out as admin\n- Log you in as the selected user\n- Redirect you to the order form\n- Track this impersonation session for audit purposes`)) {
+                return;
+            }
+
+            try {
+                // Store current admin session details for later restoration
+                const currentSession = await supabase.auth.getSession();
+                const adminData = {
+                    adminId: currentUser.id,
+                    adminEmail: currentUser.email,
+                    adminSessionId: currentSession.data.session?.access_token,
+                    impersonationStarted: new Date().toISOString()
+                };
+
+                // Store in localStorage for the return function
+                localStorage.setItem('adminImpersonationData', JSON.stringify(adminData));
+
+                // Log the impersonation start in database
+                const { error: logError } = await supabase
+                    .from('impersonation_log')
+                    .insert({
+                        admin_id: currentUser.id,
+                        target_user_id: userId,
+                        reason: 'Admin debugging/testing',
+                        admin_ip_address: null, // Could be added with additional API
+                        user_agent: navigator.userAgent
+                    });
+
+                if (logError) {
+                    console.error('Error logging impersonation:', logError);
+                    // Continue anyway - logging failure shouldn't stop impersonation
+                }
+
+                // Get target user's auth data
+                const { data: targetUser, error: userError } = await supabase
+                    .from('users')
+                    .select('*')
+                    .eq('id', userId)
+                    .single();
+
+                if (userError) throw userError;
+
+                // Sign out current admin session
+                await supabase.auth.signOut();
+
+                // Create a new session for the target user
+                // Note: This is a simplified approach. In production, you might want
+                // to use Supabase Admin API to generate a session token
+
+                // For now, we'll use a different approach: store impersonation data
+                // and redirect to a special URL that handles the impersonation
+                const impersonationData = {
+                    ...adminData,
+                    targetUserId: userId,
+                    targetUserEmail: userEmail
+                };
+
+                localStorage.setItem('pendingImpersonation', JSON.stringify(impersonationData));
+
+                // Redirect to order form with special parameter
+                window.location.href = `order-form.html?impersonate=${userId}&admin=${currentUser.id}`;
+
+            } catch (error) {
+                console.error('Error starting impersonation:', error);
+                alert('Failed to start impersonation session: ' + error.message);
             }
         }
 
