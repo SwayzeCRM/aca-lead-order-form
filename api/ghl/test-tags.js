@@ -1,4 +1,4 @@
-import { HighLevel } from '@gohighlevel/api-client';
+// Using direct fetch for Tags API since SDK method is unclear
 
 export default async function handler(req, res) {
   // Enable CORS for your domain
@@ -24,16 +24,21 @@ export default async function handler(req, res) {
       });
     }
 
-    // Initialize GoHighLevel SDK
-    const ghl = new HighLevel({
-      privateIntegrationToken: privateToken
+    // Test Tags API directly (SDK method unclear)
+    const response = await fetch(`https://services.leadconnectorhq.com/tags/?locationId=${locationId}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${privateToken}`,
+        'Version': '2021-07-28',
+        'Content-Type': 'application/json'
+      }
     });
 
-    // Test Tags API
-    const tags = await ghl.contacts.getTags({
-      locationId: locationId
-    });
+    if (!response.ok) {
+      throw new Error(`API request failed: ${response.status} ${await response.text()}`);
+    }
 
+    const tags = await response.json();
     const tagCount = tags.tags ? tags.tags.length : 0;
 
     res.status(200).json({
@@ -42,7 +47,7 @@ export default async function handler(req, res) {
       data: {
         tagCount,
         locationId,
-        endpoint: 'contacts.getTags',
+        endpoint: '/tags/',
         scopes: ['View Tags ✓', 'Edit Tags ✓']
       }
     });
