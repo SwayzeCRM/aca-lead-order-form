@@ -1130,74 +1130,9 @@
             await initializeAuth();
             await loadFormData();
             initializePurchasingForLogic();
-            checkImpersonationMode();
         });
 
         // Impersonation Management Functions
-        function checkImpersonationMode() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const impersonateUserId = urlParams.get('impersonate');
-            const adminId = urlParams.get('admin');
-            const pendingImpersonation = localStorage.getItem('pendingImpersonation');
-
-            if ((impersonateUserId && adminId) || pendingImpersonation) {
-                setupImpersonationMode(impersonateUserId, adminId, pendingImpersonation);
-            }
-        }
-
-        async function setupImpersonationMode(impersonateUserId, adminId, pendingData) {
-            try {
-                let targetUserId, targetUserEmail, adminData;
-
-                if (pendingData) {
-                    const impersonationData = JSON.parse(pendingData);
-                    targetUserId = impersonationData.targetUserId;
-                    targetUserEmail = impersonationData.targetUserEmail;
-                    adminData = impersonationData;
-                    localStorage.removeItem('pendingImpersonation');
-                } else {
-                    targetUserId = impersonateUserId;
-                    // Get user data from URL params or database
-                }
-
-                // Get target user data from database
-                const { data: targetUser, error: userError } = await supabase
-                    .from('users')
-                    .select('*')
-                    .eq('id', targetUserId)
-                    .single();
-
-                if (userError) throw userError;
-
-                // Set up the impersonation session
-                currentUser = targetUser;
-
-                // Show impersonation banner
-                const banner = document.getElementById('impersonationBanner');
-                const userEmailSpan = document.getElementById('impersonatedUserEmail');
-                const header = document.querySelector('.header');
-
-                banner.classList.add('active');
-                userEmailSpan.textContent = targetUser.email;
-                header.classList.add('impersonation-mode');
-
-                // Store impersonation state
-                const impersonationState = {
-                    isImpersonating: true,
-                    targetUserId: targetUser.id,
-                    targetUserEmail: targetUser.email,
-                    adminData: adminData || { adminId, adminEmail: 'Admin', impersonationStarted: new Date().toISOString() }
-                };
-
-                sessionStorage.setItem('impersonationState', JSON.stringify(impersonationState));
-
-                console.log('Impersonation mode active:', targetUser.email);
-
-            } catch (error) {
-                console.error('Error setting up impersonation mode:', error);
-                alert('Failed to set up impersonation mode: ' + error.message);
-            }
-        }
 
         async function returnToAdmin() {
             try {
@@ -1323,7 +1258,89 @@
             }
         }
 
+        async function handleImpersonationAuth(impersonateUserId, adminId, pendingData) {
+            try {
+                let targetUserId, targetUserEmail, adminData;
+
+                if (pendingData) {
+                    const impersonationData = JSON.parse(pendingData);
+                    targetUserId = impersonationData.targetUserId;
+                    targetUserEmail = impersonationData.targetUserEmail;
+                    adminData = impersonationData;
+                    localStorage.removeItem('pendingImpersonation');
+                } else {
+                    targetUserId = impersonateUserId;
+                }
+
+                // Get target user data using the impersonation API endpoint
+                const response = await fetch('/api/admin/get-user-for-impersonation', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        userId: targetUserId,
+                        adminId: adminId || (adminData && adminData.adminId)
+                    })
+                });
+
+                const userData = await response.json();
+
+                if (!userData.success) {
+                    console.error('Error loading target user:', userData.error);
+                    alert('Failed to load user data for impersonation: ' + userData.error);
+                    window.location.href = 'index.html';
+                    return;
+                }
+
+                const targetUser = userData.user;
+
+                // Set up the impersonation session
+                currentUser = targetUser;
+
+                // Show impersonation banner
+                const banner = document.getElementById('impersonationBanner');
+                const userEmailSpan = document.getElementById('impersonatedUserEmail');
+                const header = document.querySelector('.header');
+
+                banner.classList.add('active');
+                userEmailSpan.textContent = targetUser.email;
+                header.classList.add('impersonation-mode');
+
+                // Store impersonation state
+                const impersonationState = {
+                    isImpersonating: true,
+                    targetUserId: targetUser.id,
+                    targetUserEmail: targetUser.email,
+                    adminData: adminData || { adminId, adminEmail: 'Admin', impersonationStarted: new Date().toISOString() }
+                };
+
+                sessionStorage.setItem('impersonationState', JSON.stringify(impersonationState));
+
+                console.log('Impersonation mode active:', targetUser.email);
+                return true; // Successfully authenticated via impersonation
+
+            } catch (error) {
+                console.error('Error in impersonation auth:', error);
+                alert('Failed to set up impersonation mode: ' + error.message);
+                window.location.href = 'index.html';
+                return false;
+            }
+        }
+
         async function initializeAuth() {
+            // Check for impersonation mode first
+            const urlParams = new URLSearchParams(window.location.search);
+            const impersonateUserId = urlParams.get('impersonate');
+            const adminId = urlParams.get('admin');
+            const pendingImpersonation = localStorage.getItem('pendingImpersonation');
+
+            // If we're in impersonation mode, handle authentication differently
+            if ((impersonateUserId && adminId) || pendingImpersonation) {
+                return await handleImpersonationAuth(impersonateUserId, adminId, pendingImpersonation);
+            }
+
+            // Normal authentication flow
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) {
                 // Redirect to login if not authenticated
