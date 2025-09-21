@@ -60,31 +60,7 @@
             text-transform: uppercase;
         }
 
-        /* Modal Styles */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 10000;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .modal.show {
-            display: flex;
-        }
-
-        .modal-content {
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-            position: relative;
-            margin: 20px;
-        }
+        /* Modal styles removed - using accordion instead */
 
         .user-info {
             position: absolute;
@@ -669,15 +645,26 @@
                         </p>
 
                         <div style="margin-left: 28px;">
-                            <h5 style="margin: 0 0 12px 0; color: #495057;">Field Mapping</h5>
+                            <h5 style="margin: 0 0 12px 0; color: #495057; display: flex; align-items: center; gap: 8px; cursor: pointer;" onclick="toggleFieldMapping()">
+                                <span id="fieldMappingToggle">▶</span>
+                                Field Mapping
+                            </h5>
                             <p style="margin: 0 0 16px 0; font-size: 14px; color: #6c757d;">Map all order form fields to your GoHighLevel CRM fields including user profile, order details, and custom ORDER ID tracking.</p>
-                            <div style="display: flex; gap: 12px; align-items: center;">
-                                <button class="action-btn" style="background: #4f46e5; color: white; padding: 12px 24px; border-radius: 6px; font-weight: 500;" onclick="openFieldMappingModal()">
-                                    Configure Field Mapping
-                                </button>
-                                <span id="fieldMappingStatus" style="font-size: 14px; color: #6c757d;">
-                                    Click to map all form fields to GoHighLevel
-                                </span>
+
+                            <div id="fieldMappingAccordion" style="display: none; background: white; border: 1px solid #e1e5e9; border-radius: 6px; padding: 16px; margin-top: 16px;">
+                                <div style="margin-bottom: 16px;">
+                                    <button class="action-btn" style="background: #27ae60; color: white;" onclick="loadFieldMappingData()" id="loadFieldMappingBtn">Load Fields</button>
+                                    <span id="fieldMappingLoadStatus" style="margin-left: 12px; font-size: 14px; color: #6c757d;">Click to load GoHighLevel fields</span>
+                                </div>
+
+                                <div id="fieldMappingContainer" style="display: none;">
+                                    <!-- Field mappings will be loaded here -->
+                                </div>
+
+                                <div id="fieldMappingSaveContainer" style="display: none; margin-top: 16px; padding-top: 16px; border-top: 1px solid #e1e5e9;">
+                                    <button class="action-btn" style="background: #4f46e5; color: white;" onclick="saveAccordionFieldMapping()">Save Field Mapping</button>
+                                    <span id="fieldMappingSaveStatus" style="margin-left: 12px; font-size: 14px;"></span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -921,13 +908,7 @@
             await initializeAuth();
             await loadDashboardData();
 
-            // Ensure field mapping modal is hidden on page load
-            const fieldMappingModal = document.getElementById('fieldMappingModal');
-            if (fieldMappingModal) {
-                fieldMappingModal.classList.remove('show');
-                fieldMappingModal.style.display = 'none'; // Extra safety
-                console.log('✅ Field mapping modal explicitly hidden on page load');
-            }
+            // Modal removed - using accordion instead
         });
 
         async function initializeAuth() {
@@ -2369,8 +2350,244 @@ Note: This is a simulation. Real orders will trigger actual GoHighLevel API call
             document.body.style.overflow = 'auto';
         }
 
-        // Field Mapping Modal Functions
+        // Field Mapping Accordion Functions
         let ghlCustomFields = [];
+
+        function toggleFieldMapping() {
+            const accordion = document.getElementById('fieldMappingAccordion');
+            const toggle = document.getElementById('fieldMappingToggle');
+
+            if (accordion.style.display === 'none') {
+                accordion.style.display = 'block';
+                toggle.textContent = '▼';
+            } else {
+                accordion.style.display = 'none';
+                toggle.textContent = '▶';
+            }
+        }
+
+        async function loadFieldMappingData() {
+            const privateToken = document.getElementById('ghlPrivateToken').value;
+            const locationId = document.getElementById('ghlLocationId').value;
+            const loadBtn = document.getElementById('loadFieldMappingBtn');
+            const loadStatus = document.getElementById('fieldMappingLoadStatus');
+
+            if (!privateToken || !locationId) {
+                loadStatus.textContent = 'Please configure Private Integration Token and Location ID first';
+                loadStatus.style.color = '#e74c3c';
+                return;
+            }
+
+            try {
+                loadBtn.disabled = true;
+                loadBtn.textContent = 'Loading...';
+                loadStatus.textContent = 'Loading GoHighLevel custom fields...';
+                loadStatus.style.color = '#f39c12';
+
+                const response = await fetch('/api/ghl/get-custom-fields', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        privateToken,
+                        locationId
+                    })
+                });
+
+                const responseText = await response.text();
+                console.log('Field mapping response:', responseText);
+
+                if (!response.ok) {
+                    throw new Error(`API request failed: ${response.status} - ${responseText}`);
+                }
+
+                const data = JSON.parse(responseText);
+
+                if (data.success && data.customFields) {
+                    ghlCustomFields = data.customFields;
+                    buildFieldMappingInterface();
+                    loadStatus.textContent = `✅ Loaded ${data.customFields.length} custom fields`;
+                    loadStatus.style.color = '#27ae60';
+
+                    document.getElementById('fieldMappingContainer').style.display = 'block';
+                    document.getElementById('fieldMappingSaveContainer').style.display = 'block';
+                } else {
+                    throw new Error(data.message || 'No custom fields returned');
+                }
+
+            } catch (error) {
+                console.error('Error loading field mapping data:', error);
+                loadStatus.textContent = `❌ Error: ${error.message}`;
+                loadStatus.style.color = '#e74c3c';
+            } finally {
+                loadBtn.disabled = false;
+                loadBtn.textContent = 'Reload Fields';
+            }
+        }
+
+        function buildFieldMappingInterface() {
+            const container = document.getElementById('fieldMappingContainer');
+
+            // Standard GHL fields + custom fields
+            const ghlStandardFields = [
+                { id: 'firstName', name: 'First Name' },
+                { id: 'lastName', name: 'Last Name' },
+                { id: 'email', name: 'Email' },
+                { id: 'phone', name: 'Phone' },
+                { id: 'address1', name: 'Address' },
+                { id: 'city', name: 'City' },
+                { id: 'state', name: 'State' },
+                { id: 'postalCode', name: 'Postal Code' },
+                { id: 'country', name: 'Country' },
+                { id: 'dateOfBirth', name: 'Date of Birth' },
+                { id: 'companyName', name: 'Company Name' },
+                { id: 'website', name: 'Website' }
+            ];
+
+            const allGhlFields = [...ghlStandardFields, ...ghlCustomFields.map(field => ({
+                id: field.id,
+                name: field.name + (field.type ? ` (${field.type})` : '')
+            }))];
+
+            // Order form fields to map
+            const orderFormFields = [
+                { category: 'User Profile', fields: [
+                    { id: 'user_email', name: 'User Email', required: true },
+                    { id: 'user_first_name', name: 'User First Name', required: true },
+                    { id: 'user_last_name', name: 'User Last Name', required: true },
+                    { id: 'user_phone', name: 'User Phone', required: true },
+                    { id: 'user_api_key', name: 'User API Key', required: false },
+                    { id: 'user_location_id', name: 'User Location ID', required: false },
+                    { id: 'user_agency_name', name: 'User Agency Name', required: false }
+                ]},
+                { category: 'Individual Order Fields', fields: [
+                    { id: 'individual_firstName', name: 'Individual First Name', required: true },
+                    { id: 'individual_lastName', name: 'Individual Last Name', required: true },
+                    { id: 'individual_contactEmail', name: 'Individual Contact Email', required: true },
+                    { id: 'individual_contactPhone', name: 'Individual Contact Phone', required: true },
+                    { id: 'individual_firstNameLicense', name: 'Individual License First Name', required: true },
+                    { id: 'individual_lastNameLicense', name: 'Individual License Last Name', required: true },
+                    { id: 'individual_consentEmail', name: 'Individual Consent Email', required: true },
+                    { id: 'individual_consentPhone', name: 'Individual Consent Phone', required: true },
+                    { id: 'individual_npn', name: 'Individual NPN', required: true }
+                ]},
+                { category: 'Agency Order Fields', fields: [
+                    { id: 'agency_firstName', name: 'Agency Contact First Name', required: true },
+                    { id: 'agency_lastName', name: 'Agency Contact Last Name', required: true },
+                    { id: 'agency_contactEmail', name: 'Agency Contact Email', required: true },
+                    { id: 'agency_contactPhone', name: 'Agency Contact Phone', required: true },
+                    { id: 'agency_npn', name: 'Agency NPN', required: true },
+                    { id: 'agency_name', name: 'Agency Name', required: true },
+                    { id: 'agency_consentPhone', name: 'Agency Consent Phone', required: true },
+                    { id: 'agency_consentEmail', name: 'Agency Consent Email', required: true }
+                ]},
+                { category: 'Order Details', fields: [
+                    { id: 'order_id', name: 'Order ID', required: false, special: 'order_id' },
+                    { id: 'order_type', name: 'Order Type (individual/agency)', required: false },
+                    { id: 'lead_quantity', name: 'Lead Quantity', required: false },
+                    { id: 'additional_carriers', name: 'Additional Carriers', required: false },
+                    { id: 'invoice_email', name: 'Invoice Email', required: false },
+                    { id: 'api_key', name: 'Order API Key', required: false }
+                ]}
+            ];
+
+            let html = '';
+
+            orderFormFields.forEach(category => {
+                html += `<div style="margin-bottom: 24px;">`;
+                html += `<h4 style="margin: 0 0 12px 0; font-size: 16px; font-weight: 600; color: #2c3e50; border-bottom: 1px solid #ecf0f1; padding-bottom: 8px;">${category.category}</h4>`;
+
+                category.fields.forEach(field => {
+                    const isSpecial = field.special === 'order_id';
+                    const fieldLabel = isSpecial ?
+                        `${field.name} <span style="color: #f39c12; font-size: 12px; font-weight: bold;">[SPECIAL]</span>` :
+                        field.name;
+                    const requiredMark = field.required ? '<span style="color: #e74c3c;">*</span>' : '';
+
+                    html += `<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 12px; align-items: center;">`;
+                    html += `<label style="font-size: 14px; color: #2c3e50;">${fieldLabel} ${requiredMark}</label>`;
+                    html += `<select class="accordion-field-select" data-form-field="${field.id}" style="padding: 8px; border: 1px solid #e1e5e9; border-radius: 4px; font-size: 14px;">`;
+                    html += `<option value="">Select GoHighLevel field...</option>`;
+
+                    allGhlFields.forEach(ghlField => {
+                        html += `<option value="${ghlField.id}">${ghlField.name}</option>`;
+                    });
+
+                    html += `</select>`;
+                    html += `</div>`;
+                });
+
+                html += `</div>`;
+            });
+
+            container.innerHTML = html;
+
+            // Load existing mappings if any
+            loadExistingMappings();
+        }
+
+        async function loadExistingMappings() {
+            try {
+                const { data, error } = await supabase
+                    .from('admin_settings')
+                    .select('setting_value')
+                    .eq('setting_key', 'field_mappings')
+                    .single();
+
+                if (data && data.setting_value) {
+                    const mappings = JSON.parse(data.setting_value);
+
+                    // Apply existing mappings
+                    Object.keys(mappings).forEach(formField => {
+                        const select = document.querySelector(`[data-form-field="${formField}"]`);
+                        if (select) {
+                            select.value = mappings[formField];
+                        }
+                    });
+
+                    console.log('Loaded existing field mappings:', mappings);
+                }
+            } catch (error) {
+                console.log('No existing field mappings found or error loading:', error);
+            }
+        }
+
+        async function saveAccordionFieldMapping() {
+            const saveStatus = document.getElementById('fieldMappingSaveStatus');
+
+            try {
+                const mappings = {};
+                const selects = document.querySelectorAll('.accordion-field-select');
+
+                selects.forEach(select => {
+                    const formField = select.getAttribute('data-form-field');
+                    const ghlField = select.value;
+                    if (ghlField) {
+                        mappings[formField] = ghlField;
+                    }
+                });
+
+                const { data, error } = await supabase
+                    .from('admin_settings')
+                    .upsert({
+                        setting_key: 'field_mappings',
+                        setting_value: JSON.stringify(mappings)
+                    });
+
+                if (error) throw error;
+
+                saveStatus.textContent = `✅ Saved ${Object.keys(mappings).length} field mappings`;
+                saveStatus.style.color = '#27ae60';
+
+                console.log('Saved field mappings:', mappings);
+
+            } catch (error) {
+                console.error('Error saving field mappings:', error);
+                saveStatus.textContent = `❌ Error saving: ${error.message}`;
+                saveStatus.style.color = '#e74c3c';
+            }
+        }
 
         async function debugFieldMappingAPI() {
             const privateToken = document.getElementById('ghlPrivateToken').value;
@@ -2455,331 +2672,10 @@ Note: This is a simulation. Real orders will trigger actual GoHighLevel API call
             }
         }
 
-        async function openFieldMappingModal() {
-            console.log('🔍 openFieldMappingModal() called');
-
-            const privateToken = document.getElementById('ghlPrivateToken').value;
-            const locationId = document.getElementById('ghlLocationId').value;
-
-            if (!privateToken || !locationId) {
-                showPrivateTokenResult('Please configure Private Integration Token and Location ID first', 'error');
-                return;
-            }
-
-            // Load GoHighLevel custom fields
-            try {
-                const response = await fetch('/api/ghl/get-custom-fields', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        privateToken,
-                        locationId
-                    })
-                });
-
-                // Get response as text first to debug what we're getting
-                const responseText = await response.text();
-                console.log('Field mapping response status:', response.status);
-                console.log('Field mapping response body (raw):', responseText);
-
-                // Check if response is ok
-                if (!response.ok) {
-                    console.error('API Response Error:', {
-                        status: response.status,
-                        statusText: response.statusText,
-                        url: response.url,
-                        body: responseText
-                    });
-                    throw new Error(`API request failed: ${response.status} ${response.statusText} - ${responseText}`);
-                }
-
-                // Try to parse JSON
-                let data;
-                try {
-                    if (!responseText || responseText.trim() === '') {
-                        throw new Error('Empty response from API');
-                    }
-                    data = JSON.parse(responseText);
-                } catch (jsonError) {
-                    console.error('JSON parsing failed:', jsonError);
-                    console.error('Response body that failed to parse:', responseText);
-                    throw new Error(`Invalid JSON response from API: ${jsonError.message}. Response was: ${responseText.substring(0, 200)}...`);
-                }
-
-                if (data.success && data.customFields) {
-                    ghlCustomFields = data.customFields;
-                    await populateFieldMapping();
-                    console.log('✅ Showing field mapping modal');
-                    document.getElementById('fieldMappingModal').classList.add('show');
-                    document.body.style.overflow = 'hidden';
-                } else {
-                    showPrivateTokenResult('Failed to load GoHighLevel custom fields: ' + (data.message || 'Unknown error'), 'error');
-                }
-
-            } catch (error) {
-                console.error('Error loading custom fields:', error);
-                showPrivateTokenResult('Error loading GoHighLevel custom fields: ' + error.message, 'error');
-            }
-        }
-
-        async function populateFieldMapping() {
-            // Load existing mappings
-            let existingMappings = {};
-            try {
-                const { data, error } = await supabase
-                    .from('admin_settings')
-                    .select('setting_value')
-                    .eq('setting_key', 'field_mappings')
-                    .single();
-
-                if (data && data.setting_value) {
-                    existingMappings = JSON.parse(data.setting_value);
-                }
-            } catch (error) {
-                console.log('No existing field mappings found');
-            }
-            // Standard GHL fields + custom fields
-            const ghlStandardFields = [
-                { id: 'firstName', name: 'First Name' },
-                { id: 'lastName', name: 'Last Name' },
-                { id: 'email', name: 'Email' },
-                { id: 'phone', name: 'Phone' },
-                { id: 'address1', name: 'Address' },
-                { id: 'city', name: 'City' },
-                { id: 'state', name: 'State' },
-                { id: 'postalCode', name: 'Postal Code' },
-                { id: 'country', name: 'Country' },
-                { id: 'dateOfBirth', name: 'Date of Birth' },
-                { id: 'companyName', name: 'Company Name' },
-                { id: 'website', name: 'Website' }
-            ];
-
-            const allGhlFields = [...ghlStandardFields, ...ghlCustomFields.map(field => ({
-                id: field.id,
-                name: field.name + (field.type ? ` (${field.type})` : '')
-            }))];
-
-            const mappingContainer = document.getElementById('fieldMappingContainer');
-            mappingContainer.innerHTML = '';
-
-            // Form fields from our order form
-            const formFields = [
-                { category: 'User Profile', fields: [
-                    { id: 'user_email', name: 'User Email', required: true },
-                    { id: 'user_first_name', name: 'User First Name', required: true },
-                    { id: 'user_last_name', name: 'User Last Name', required: true },
-                    { id: 'user_phone', name: 'User Phone', required: true },
-                    { id: 'user_api_key', name: 'User API Key', required: false },
-                    { id: 'user_location_id', name: 'User Location ID', required: false },
-                    { id: 'user_agency_name', name: 'User Agency Name', required: false }
-                ]},
-                { category: 'Individual Order Fields', fields: [
-                    { id: 'individual_firstName', name: 'Individual First Name', required: true },
-                    { id: 'individual_lastName', name: 'Individual Last Name', required: true },
-                    { id: 'individual_contactEmail', name: 'Individual Contact Email', required: true },
-                    { id: 'individual_contactPhone', name: 'Individual Contact Phone', required: true },
-                    { id: 'individual_firstNameLicense', name: 'Individual License First Name', required: true },
-                    { id: 'individual_lastNameLicense', name: 'Individual License Last Name', required: true },
-                    { id: 'individual_consentEmail', name: 'Individual Consent Email', required: true },
-                    { id: 'individual_consentPhone', name: 'Individual Consent Phone', required: true },
-                    { id: 'individual_npn', name: 'Individual NPN', required: true }
-                ]},
-                { category: 'Agency Order Fields', fields: [
-                    { id: 'agency_firstName', name: 'Agency Contact First Name', required: true },
-                    { id: 'agency_lastName', name: 'Agency Contact Last Name', required: true },
-                    { id: 'agency_contactEmail', name: 'Agency Contact Email', required: true },
-                    { id: 'agency_contactPhone', name: 'Agency Contact Phone', required: true },
-                    { id: 'agency_npn', name: 'Agency NPN', required: true },
-                    { id: 'agency_name', name: 'Agency Name', required: true },
-                    { id: 'agency_consentPhone', name: 'Agency Consent Phone', required: true },
-                    { id: 'agency_consentEmail', name: 'Agency Consent Email', required: true }
-                ]},
-                { category: 'Order Details', fields: [
-                    { id: 'order_id', name: 'Order ID', required: false, special: 'order_id' },
-                    { id: 'order_type', name: 'Order Type (individual/agency)', required: false },
-                    { id: 'lead_quantity', name: 'Lead Quantity', required: false },
-                    { id: 'additional_carriers', name: 'Additional Carriers', required: false },
-                    { id: 'invoice_email', name: 'Invoice Email', required: false },
-                    { id: 'api_key', name: 'Order API Key', required: false }
-                ]}
-            ];
-
-            formFields.forEach(category => {
-                const categoryDiv = document.createElement('div');
-                categoryDiv.className = 'field-category';
-
-                const categoryHeader = document.createElement('h4');
-                categoryHeader.textContent = category.category;
-                categoryHeader.style.cssText = 'margin: 20px 0 10px 0; font-size: 14px; font-weight: 600; color: #2c3e50; border-bottom: 1px solid #ecf0f1; padding-bottom: 5px;';
-                categoryDiv.appendChild(categoryHeader);
-
-                category.fields.forEach(field => {
-                    const fieldRow = document.createElement('div');
-                    fieldRow.className = 'field-mapping-row';
-                    fieldRow.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f8f9fa;';
-
-                    const fieldLabel = document.createElement('div');
-                    fieldLabel.className = 'form-field-label';
-                    fieldLabel.style.cssText = 'flex: 1; font-size: 14px; color: #2c3e50;';
-                    fieldLabel.innerHTML = `${field.name} ${field.required ? '<span style="color: #e74c3c;">*</span>' : ''}`;
-                    if (field.special === 'order_id') {
-                        fieldLabel.innerHTML += ' <span style="color: #f39c12; font-size: 12px; font-weight: bold;">[SPECIAL]</span>';
-                    }
-
-                    const fieldSelect = document.createElement('select');
-                    fieldSelect.className = 'ghl-field-select';
-                    fieldSelect.style.cssText = 'flex: 1; margin-left: 20px; padding: 8px 12px; border: 1px solid #e1e5e9; border-radius: 6px; font-size: 14px; background: white; cursor: pointer;';
-                    fieldSelect.setAttribute('data-form-field', field.id);
-
-                    // Add default option
-                    const defaultOption = document.createElement('option');
-                    defaultOption.value = '';
-                    defaultOption.textContent = field.special === 'order_id' ? 'Select field to store Order ID' : 'Select GoHighLevel field';
-                    fieldSelect.appendChild(defaultOption);
-
-                    // Add GHL fields
-                    allGhlFields.forEach(ghlField => {
-                        const option = document.createElement('option');
-                        option.value = ghlField.id;
-                        option.textContent = ghlField.name;
-                        fieldSelect.appendChild(option);
-                    });
-
-                    // Set existing mapping if available
-                    if (existingMappings[field.id]) {
-                        fieldSelect.value = existingMappings[field.id];
-                    }
-
-                    fieldRow.appendChild(fieldLabel);
-                    fieldRow.appendChild(fieldSelect);
-                    categoryDiv.appendChild(fieldRow);
-                });
-
-                mappingContainer.appendChild(categoryDiv);
-            });
-        }
-
-        function closeFieldMappingModal() {
-            console.log('🚫 Closing field mapping modal');
-            document.getElementById('fieldMappingModal').classList.remove('show');
-            document.body.style.overflow = 'auto';
-        }
-
-        async function saveFieldMapping() {
-            const mappings = {};
-            const selects = document.querySelectorAll('.ghl-field-select');
-
-            selects.forEach(select => {
-                const formField = select.getAttribute('data-form-field');
-                const ghlField = select.value;
-                if (ghlField) {
-                    mappings[formField] = ghlField;
-                }
-            });
-
-            // Save mappings to database
-            try {
-                const { data, error } = await supabase
-                    .from('admin_settings')
-                    .upsert({
-                        setting_key: 'field_mappings',
-                        setting_value: JSON.stringify(mappings)
-                    });
-
-                if (error) throw error;
-
-                showPrivateTokenResult('✅ Field mappings saved successfully!', 'success');
-                updateFieldMappingStatus(mappings);
-                closeFieldMappingModal();
-
-            } catch (error) {
-                console.error('Error saving field mappings:', error);
-                alert('Error saving field mappings: ' + error.message);
-            }
-        }
-
-        function updateFieldMappingStatus(mappings) {
-            const mappedCount = Object.keys(mappings || {}).length;
-            const statusElement = document.getElementById('fieldMappingStatus');
-
-            if (mappedCount > 0) {
-                statusElement.innerHTML = `<span style="color: #27ae60; font-weight: 500;">✓ ${mappedCount} fields mapped</span>`;
-            } else {
-                statusElement.innerHTML = '<span style="color: #6c757d;">Click to map all form fields to GoHighLevel</span>';
-            }
-        }
-
-        async function loadFieldMappingStatus() {
-            try {
-                const { data, error } = await supabase
-                    .from('admin_settings')
-                    .select('setting_value')
-                    .eq('setting_key', 'field_mappings')
-                    .single();
-
-                if (data && data.setting_value) {
-                    const mappings = JSON.parse(data.setting_value);
-                    updateFieldMappingStatus(mappings);
-                }
-            } catch (error) {
-                console.log('No field mappings found yet');
-            }
-        }
+        // All field mapping functionality moved to accordion functions above
     </script>
 
-    <!-- Field Mapping Modal -->
-    <div id="fieldMappingModal" class="modal" onclick="closeFieldMappingModal()">
-        <div class="modal-content" style="max-width: 900px; width: 90%; max-height: 90vh; overflow-y: auto;" onclick="event.stopPropagation()">
-            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; border-bottom: 1px solid #e1e5e9; background: #f8f9fa;">
-                <h2 style="margin: 0; font-size: 18px; font-weight: 600; color: #2c3e50;">Map Fields</h2>
-                <button class="modal-close" onclick="closeFieldMappingModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #95a5a6; padding: 0; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;">&times;</button>
-            </div>
-
-            <div style="padding: 24px;">
-                <div style="background: #f8f9fa; border: 1px solid #e1e5e9; border-radius: 6px; padding: 16px; margin-bottom: 24px;">
-                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-                        <div style="width: 16px; height: 16px; background: #f39c12; border-radius: 3px; display: flex; align-items: center; justify-content: center;">
-                            <span style="color: white; font-size: 10px; font-weight: bold;">!</span>
-                        </div>
-                        <span style="font-size: 14px; color: #2c3e50; font-weight: 500;">Field Mapping Instructions</span>
-                    </div>
-                    <p style="margin: 0; font-size: 13px; color: #5a6c7d; line-height: 1.4;">
-                        Map the fields in your order form to the corresponding GoHighLevel fields. Required fields marked with <span style="color: #e74c3c;">*</span> should be mapped to receive leads successfully. The <span style="color: #f39c12; font-weight: bold;">ORDER ID</span> field is special - it will store a unique identifier for each order.
-                    </p>
-                </div>
-
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
-                    <div>
-                        <h3 style="margin: 0 0 12px 0; font-size: 16px; font-weight: 600; color: #2c3e50;">Form Fields</h3>
-                        <p style="margin: 0; font-size: 14px; color: #7f8c8d;">Fields from your ACA Lead Order Form</p>
-                    </div>
-                    <div>
-                        <h3 style="margin: 0 0 12px 0; font-size: 16px; font-weight: 600; color: #2c3e50;">GoHighLevel Fields</h3>
-                        <p style="margin: 0; font-size: 14px; color: #7f8c8d;">Available fields in your GoHighLevel CRM</p>
-                    </div>
-                </div>
-
-                <div id="fieldMappingContainer" style="border: 1px solid #e1e5e9; border-radius: 6px; background: white; padding: 16px;">
-                    <!-- Field mappings will be populated here -->
-                </div>
-
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 24px; padding-top: 16px; border-top: 1px solid #e1e5e9;">
-                    <div style="display: flex; align-items: center; gap: 8px; color: #f39c12; font-size: 14px;">
-                        <div style="width: 16px; height: 16px; background: #f39c12; border-radius: 3px; display: flex; align-items: center; justify-content: center;">
-                            <span style="color: white; font-size: 10px; font-weight: bold;">!</span>
-                        </div>
-                        <span>Map required fields to receive leads successfully</span>
-                    </div>
-                    <div style="display: flex; gap: 12px;">
-                        <button onclick="closeFieldMappingModal()" style="padding: 10px 20px; border: 1px solid #e1e5e9; background: white; color: #5a6c7d; border-radius: 6px; cursor: pointer; font-size: 14px;">Cancel</button>
-                        <button onclick="saveFieldMapping()" style="padding: 10px 20px; border: none; background: #4f46e5; color: white; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">Confirm</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- Modal removed - using accordion instead -->
 
 </body>
 </html>
