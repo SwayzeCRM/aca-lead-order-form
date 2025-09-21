@@ -609,7 +609,10 @@
                         </div>
                         <div class="form-group">
                             <label>Location ID</label>
-                            <input type="text" id="ghlLocationId" placeholder="ve9EPM428h8vShlRW1KT" style="font-family: monospace;">
+                            <div style="display: flex; gap: 8px; align-items: flex-start;">
+                                <input type="text" id="ghlLocationId" placeholder="ve9EPM428h8vShlRW1KT" style="font-family: monospace; flex: 1;">
+                                <button type="button" onclick="findLocationId()" class="btn-secondary" style="white-space: nowrap;">Find Location ID</button>
+                            </div>
                             <div class="help-text">The GoHighLevel Location ID for this integration</div>
                         </div>
                     </div>
@@ -618,6 +621,7 @@
                         <button class="action-btn btn-warning" onclick="testContactsAPI()">Test Contacts API</button>
                         <button class="action-btn btn-success" onclick="testOpportunitiesAPI()">Test Opportunities API</button>
                         <button class="action-btn" style="background: #9b59b6; color: white;" onclick="testTagsAPI()">Test Tags API</button>
+                        <button class="action-btn" style="background: #27ae60; color: white;" onclick="openFieldMappingModal()">Map Fields</button>
                     </div>
                     <div id="privateTokenResult" style="margin-top: 15px; padding: 12px; border-radius: 4px; display: none;"></div>
                 </div>
@@ -1271,6 +1275,59 @@
             } catch (error) {
                 console.error('Error saving private integration:', error);
                 showPrivateTokenResult('Error saving integration: ' + error.message, 'error');
+            }
+        }
+
+        async function findLocationId() {
+            try {
+                const privateToken = document.getElementById('ghlPrivateToken').value;
+
+                if (!privateToken) {
+                    showPrivateTokenResult('Please enter your Private Integration Token first', 'error');
+                    return;
+                }
+
+                showPrivateTokenResult('🔍 Finding your GoHighLevel locations...', 'info');
+
+                const response = await fetch('/api/ghl/get-locations.js', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        privateToken
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.locations && data.locations.length > 0) {
+                    let resultMessage = `✅ Found ${data.locations.length} location(s):\n\n`;
+                    data.locations.forEach((location, index) => {
+                        resultMessage += `${index + 1}. ${location.name || location.businessName || 'Unnamed Location'}\n`;
+                        resultMessage += `   Location ID: ${location.id}\n`;
+                        if (location.city && location.state) {
+                            resultMessage += `   Address: ${location.city}, ${location.state}\n`;
+                        }
+                        resultMessage += '\n';
+                    });
+
+                    // Auto-fill the first location if only one is found
+                    if (data.locations.length === 1) {
+                        document.getElementById('ghlLocationId').value = data.locations[0].id;
+                        resultMessage += `✨ Auto-filled Location ID: ${data.locations[0].id}`;
+                    } else {
+                        resultMessage += 'Copy the Location ID you want to use and paste it in the Location ID field above.';
+                    }
+
+                    showPrivateTokenResult(resultMessage, 'success');
+                } else {
+                    showPrivateTokenResult(`❌ ${data.message || 'No locations found'}`, 'error');
+                }
+
+            } catch (error) {
+                console.error('Find Location ID error:', error);
+                showPrivateTokenResult(`❌ Failed to find locations: ${error.message}`, 'error');
             }
         }
 
@@ -2292,6 +2349,255 @@ Note: This is a simulation. Real orders will trigger actual GoHighLevel API call
             document.getElementById('editOrderModal').classList.remove('show');
             document.body.style.overflow = 'auto';
         }
+
+        // Field Mapping Modal Functions
+        let ghlCustomFields = [];
+
+        async function openFieldMappingModal() {
+            const privateToken = document.getElementById('ghlPrivateToken').value;
+            const locationId = document.getElementById('ghlLocationId').value;
+
+            if (!privateToken || !locationId) {
+                showPrivateTokenResult('Please configure Private Integration Token and Location ID first', 'error');
+                return;
+            }
+
+            // Load GoHighLevel custom fields
+            try {
+                const response = await fetch('/api/ghl/get-custom-fields.js', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        privateToken,
+                        locationId
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.customFields) {
+                    ghlCustomFields = data.customFields;
+                    populateFieldMapping();
+                    document.getElementById('fieldMappingModal').classList.add('show');
+                    document.body.style.overflow = 'hidden';
+                } else {
+                    showPrivateTokenResult('Failed to load GoHighLevel custom fields: ' + (data.message || 'Unknown error'), 'error');
+                }
+
+            } catch (error) {
+                console.error('Error loading custom fields:', error);
+                showPrivateTokenResult('Error loading GoHighLevel custom fields: ' + error.message, 'error');
+            }
+        }
+
+        function populateFieldMapping() {
+            // Standard GHL fields + custom fields
+            const ghlStandardFields = [
+                { id: 'firstName', name: 'First Name' },
+                { id: 'lastName', name: 'Last Name' },
+                { id: 'email', name: 'Email' },
+                { id: 'phone', name: 'Phone' },
+                { id: 'address1', name: 'Address' },
+                { id: 'city', name: 'City' },
+                { id: 'state', name: 'State' },
+                { id: 'postalCode', name: 'Postal Code' },
+                { id: 'country', name: 'Country' },
+                { id: 'dateOfBirth', name: 'Date of Birth' },
+                { id: 'companyName', name: 'Company Name' },
+                { id: 'website', name: 'Website' }
+            ];
+
+            const allGhlFields = [...ghlStandardFields, ...ghlCustomFields.map(field => ({
+                id: field.id,
+                name: field.name + (field.type ? ` (${field.type})` : '')
+            }))];
+
+            const mappingContainer = document.getElementById('fieldMappingContainer');
+            mappingContainer.innerHTML = '';
+
+            // Form fields from our order form
+            const formFields = [
+                { category: 'User Profile', fields: [
+                    { id: 'user_email', name: 'User Email', required: true },
+                    { id: 'user_first_name', name: 'User First Name', required: true },
+                    { id: 'user_last_name', name: 'User Last Name', required: true },
+                    { id: 'user_phone', name: 'User Phone', required: true },
+                    { id: 'user_api_key', name: 'User API Key', required: false },
+                    { id: 'user_location_id', name: 'User Location ID', required: false },
+                    { id: 'user_agency_name', name: 'User Agency Name', required: false }
+                ]},
+                { category: 'Individual Order Fields', fields: [
+                    { id: 'individual_firstName', name: 'Individual First Name', required: true },
+                    { id: 'individual_lastName', name: 'Individual Last Name', required: true },
+                    { id: 'individual_contactEmail', name: 'Individual Contact Email', required: true },
+                    { id: 'individual_contactPhone', name: 'Individual Contact Phone', required: true },
+                    { id: 'individual_firstNameLicense', name: 'Individual License First Name', required: true },
+                    { id: 'individual_lastNameLicense', name: 'Individual License Last Name', required: true },
+                    { id: 'individual_consentEmail', name: 'Individual Consent Email', required: true },
+                    { id: 'individual_consentPhone', name: 'Individual Consent Phone', required: true },
+                    { id: 'individual_npn', name: 'Individual NPN', required: true }
+                ]},
+                { category: 'Agency Order Fields', fields: [
+                    { id: 'agency_firstName', name: 'Agency Contact First Name', required: true },
+                    { id: 'agency_lastName', name: 'Agency Contact Last Name', required: true },
+                    { id: 'agency_contactEmail', name: 'Agency Contact Email', required: true },
+                    { id: 'agency_contactPhone', name: 'Agency Contact Phone', required: true },
+                    { id: 'agency_npn', name: 'Agency NPN', required: true },
+                    { id: 'agency_name', name: 'Agency Name', required: true },
+                    { id: 'agency_consentPhone', name: 'Agency Consent Phone', required: true },
+                    { id: 'agency_consentEmail', name: 'Agency Consent Email', required: true }
+                ]},
+                { category: 'Order Details', fields: [
+                    { id: 'order_id', name: 'Order ID', required: false, special: 'order_id' },
+                    { id: 'order_type', name: 'Order Type (individual/agency)', required: false },
+                    { id: 'lead_quantity', name: 'Lead Quantity', required: false },
+                    { id: 'additional_carriers', name: 'Additional Carriers', required: false },
+                    { id: 'invoice_email', name: 'Invoice Email', required: false },
+                    { id: 'api_key', name: 'Order API Key', required: false }
+                ]}
+            ];
+
+            formFields.forEach(category => {
+                const categoryDiv = document.createElement('div');
+                categoryDiv.className = 'field-category';
+
+                const categoryHeader = document.createElement('h4');
+                categoryHeader.textContent = category.category;
+                categoryHeader.style.cssText = 'margin: 20px 0 10px 0; font-size: 14px; font-weight: 600; color: #2c3e50; border-bottom: 1px solid #ecf0f1; padding-bottom: 5px;';
+                categoryDiv.appendChild(categoryHeader);
+
+                category.fields.forEach(field => {
+                    const fieldRow = document.createElement('div');
+                    fieldRow.className = 'field-mapping-row';
+                    fieldRow.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f8f9fa;';
+
+                    const fieldLabel = document.createElement('div');
+                    fieldLabel.className = 'form-field-label';
+                    fieldLabel.style.cssText = 'flex: 1; font-size: 14px; color: #2c3e50;';
+                    fieldLabel.innerHTML = `${field.name} ${field.required ? '<span style="color: #e74c3c;">*</span>' : ''}`;
+                    if (field.special === 'order_id') {
+                        fieldLabel.innerHTML += ' <span style="color: #f39c12; font-size: 12px; font-weight: bold;">[SPECIAL]</span>';
+                    }
+
+                    const fieldSelect = document.createElement('select');
+                    fieldSelect.className = 'ghl-field-select';
+                    fieldSelect.style.cssText = 'flex: 1; margin-left: 20px; padding: 8px 12px; border: 1px solid #e1e5e9; border-radius: 6px; font-size: 14px; background: white; cursor: pointer;';
+                    fieldSelect.setAttribute('data-form-field', field.id);
+
+                    // Add default option
+                    const defaultOption = document.createElement('option');
+                    defaultOption.value = '';
+                    defaultOption.textContent = field.special === 'order_id' ? 'Select field to store Order ID' : 'Select GoHighLevel field';
+                    fieldSelect.appendChild(defaultOption);
+
+                    // Add GHL fields
+                    allGhlFields.forEach(ghlField => {
+                        const option = document.createElement('option');
+                        option.value = ghlField.id;
+                        option.textContent = ghlField.name;
+                        fieldSelect.appendChild(option);
+                    });
+
+                    fieldRow.appendChild(fieldLabel);
+                    fieldRow.appendChild(fieldSelect);
+                    categoryDiv.appendChild(fieldRow);
+                });
+
+                mappingContainer.appendChild(categoryDiv);
+            });
+        }
+
+        function closeFieldMappingModal() {
+            document.getElementById('fieldMappingModal').classList.remove('show');
+            document.body.style.overflow = 'auto';
+        }
+
+        async function saveFieldMapping() {
+            const mappings = {};
+            const selects = document.querySelectorAll('.ghl-field-select');
+
+            selects.forEach(select => {
+                const formField = select.getAttribute('data-form-field');
+                const ghlField = select.value;
+                if (ghlField) {
+                    mappings[formField] = ghlField;
+                }
+            });
+
+            // Save mappings to database
+            try {
+                const { data, error } = await supabase
+                    .from('admin_settings')
+                    .upsert({
+                        setting_key: 'field_mappings',
+                        setting_value: JSON.stringify(mappings)
+                    });
+
+                if (error) throw error;
+
+                showPrivateTokenResult('✅ Field mappings saved successfully!', 'success');
+                closeFieldMappingModal();
+
+            } catch (error) {
+                console.error('Error saving field mappings:', error);
+                alert('Error saving field mappings: ' + error.message);
+            }
+        }
     </script>
+
+    <!-- Field Mapping Modal -->
+    <div id="fieldMappingModal" class="modal">
+        <div class="modal-content" style="max-width: 900px; width: 90%; max-height: 90vh; overflow-y: auto;">
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; border-bottom: 1px solid #e1e5e9; background: #f8f9fa;">
+                <h2 style="margin: 0; font-size: 18px; font-weight: 600; color: #2c3e50;">Map Fields</h2>
+                <button class="modal-close" onclick="closeFieldMappingModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #95a5a6; padding: 0; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;">&times;</button>
+            </div>
+
+            <div style="padding: 24px;">
+                <div style="background: #f8f9fa; border: 1px solid #e1e5e9; border-radius: 6px; padding: 16px; margin-bottom: 24px;">
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                        <div style="width: 16px; height: 16px; background: #f39c12; border-radius: 3px; display: flex; align-items: center; justify-content: center;">
+                            <span style="color: white; font-size: 10px; font-weight: bold;">!</span>
+                        </div>
+                        <span style="font-size: 14px; color: #2c3e50; font-weight: 500;">Field Mapping Instructions</span>
+                    </div>
+                    <p style="margin: 0; font-size: 13px; color: #5a6c7d; line-height: 1.4;">
+                        Map the fields in your order form to the corresponding GoHighLevel fields. Required fields marked with <span style="color: #e74c3c;">*</span> should be mapped to receive leads successfully. The <span style="color: #f39c12; font-weight: bold;">ORDER ID</span> field is special - it will store a unique identifier for each order.
+                    </p>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
+                    <div>
+                        <h3 style="margin: 0 0 12px 0; font-size: 16px; font-weight: 600; color: #2c3e50;">Form Fields</h3>
+                        <p style="margin: 0; font-size: 14px; color: #7f8c8d;">Fields from your ACA Lead Order Form</p>
+                    </div>
+                    <div>
+                        <h3 style="margin: 0 0 12px 0; font-size: 16px; font-weight: 600; color: #2c3e50;">GoHighLevel Fields</h3>
+                        <p style="margin: 0; font-size: 14px; color: #7f8c8d;">Available fields in your GoHighLevel CRM</p>
+                    </div>
+                </div>
+
+                <div id="fieldMappingContainer" style="border: 1px solid #e1e5e9; border-radius: 6px; background: white; padding: 16px;">
+                    <!-- Field mappings will be populated here -->
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 24px; padding-top: 16px; border-top: 1px solid #e1e5e9;">
+                    <div style="display: flex; align-items: center; gap: 8px; color: #f39c12; font-size: 14px;">
+                        <div style="width: 16px; height: 16px; background: #f39c12; border-radius: 3px; display: flex; align-items: center; justify-content: center;">
+                            <span style="color: white; font-size: 10px; font-weight: bold;">!</span>
+                        </div>
+                        <span>Map required fields to receive leads successfully</span>
+                    </div>
+                    <div style="display: flex; gap: 12px;">
+                        <button onclick="closeFieldMappingModal()" style="padding: 10px 20px; border: 1px solid #e1e5e9; background: white; color: #5a6c7d; border-radius: 6px; cursor: pointer; font-size: 14px;">Cancel</button>
+                        <button onclick="saveFieldMapping()" style="padding: 10px 20px; border: none; background: #4f46e5; color: white; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">Confirm</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>
