@@ -1684,7 +1684,20 @@
                 // Redirect to user dashboard with special parameter
                 const redirectUrl = `index.html?impersonate=${userId}&admin=${currentUser.id}`;
                 console.log('Redirecting to:', redirectUrl);
-                window.location.href = redirectUrl;
+
+                // Check if we're in an iframe and handle accordingly
+                if (window.self !== window.top) {
+                    console.log('Running in iframe, attempting parent window navigation');
+                    try {
+                        window.top.location.href = redirectUrl;
+                    } catch (e) {
+                        console.log('Cannot access parent window, using current window');
+                        window.location.href = redirectUrl;
+                    }
+                } else {
+                    console.log('Running in normal window');
+                    window.location.href = redirectUrl;
+                }
 
             } catch (error) {
                 console.error('Error starting impersonation:', error);
