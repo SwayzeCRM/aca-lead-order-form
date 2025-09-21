@@ -263,6 +263,85 @@
             background: #5a6268;
         }
 
+        /* Impersonation Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 8px;
+            padding: 32px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-header {
+            margin-bottom: 24px;
+        }
+
+        .modal-header h2 {
+            margin: 0 0 8px 0;
+            color: #2c3e50;
+            font-size: 20px;
+        }
+
+        .modal-header p {
+            margin: 0;
+            color: #7f8c8d;
+        }
+
+        .impersonation-url {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 12px;
+            font-family: monospace;
+            font-size: 14px;
+            word-break: break-all;
+            margin: 16px 0;
+            user-select: all;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 24px;
+        }
+
+        .copy-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .copy-btn:hover {
+            background: #2980b9;
+        }
+
+        .copy-btn.success {
+            background: #27ae60;
+        }
+
         .btn-danger {
             background: #e74c3c;
             color: white;
@@ -1629,67 +1708,98 @@
 
         // User Impersonation Functions
         async function loginAsUser(userId, userEmail) {
-            if (!confirm(`Are you sure you want to login as "${userEmail}"?\n\nThis will:\n- Log you out as admin\n- Log you in as the selected user\n- Redirect you to the order form\n- Track this impersonation session for audit purposes`)) {
-                return;
-            }
+            // Generate impersonation URL
+            const impersonationUrl = `${window.location.origin}/index.html?impersonate=${userId}&admin=${currentUser.id}`;
+
+            // Show modal with URL and instructions
+            showImpersonationModal(userEmail, impersonationUrl, userId);
+        }
+
+        function showImpersonationModal(userEmail, impersonationUrl, userId) {
+            const modal = document.getElementById('impersonationModal');
+            const modalUserEmail = document.getElementById('modalUserEmail');
+            const urlContainer = document.getElementById('impersonationUrl');
+
+            modalUserEmail.textContent = userEmail;
+            urlContainer.textContent = impersonationUrl;
+
+            // Store URL for copying
+            modal.dataset.impersonationUrl = impersonationUrl;
+            modal.dataset.userId = userId;
+
+            modal.classList.add('active');
+        }
+
+        function closeImpersonationModal() {
+            const modal = document.getElementById('impersonationModal');
+            modal.classList.remove('active');
+        }
+
+        async function copyImpersonationUrl() {
+            const modal = document.getElementById('impersonationModal');
+            const url = modal.dataset.impersonationUrl;
+            const copyBtn = document.querySelector('.copy-btn');
 
             try {
-                // Prepare admin data for impersonation logging
-                const currentSession = await supabase.auth.getSession();
-                const adminData = {
-                    adminId: currentUser.id,
-                    adminEmail: currentUser.email,
-                    adminSessionId: currentSession.data.session?.access_token,
-                    impersonationStarted: new Date().toISOString()
-                };
+                await navigator.clipboard.writeText(url);
+
+                // Visual feedback
+                const originalText = copyBtn.textContent;
+                copyBtn.textContent = '✓ Copied!';
+                copyBtn.classList.add('success');
+
+                setTimeout(() => {
+                    copyBtn.textContent = originalText;
+                    copyBtn.classList.remove('success');
+                }, 2000);
 
                 // Log the impersonation start in database
-                const { error: logError } = await supabase
-                    .from('impersonation_log')
-                    .insert({
-                        admin_id: currentUser.id,
-                        target_user_id: userId,
-                        reason: 'Admin debugging/testing',
-                        admin_ip_address: null, // Could be added with additional API
-                        user_agent: navigator.userAgent
-                    });
+                const userId = modal.dataset.userId;
+                try {
+                    const { error: logError } = await supabase
+                        .from('impersonation_log')
+                        .insert({
+                            admin_id: currentUser.id,
+                            target_user_id: userId,
+                            reason: 'Admin debugging/testing',
+                            admin_ip_address: null,
+                            user_agent: navigator.userAgent
+                        });
 
-                if (logError) {
-                    console.error('Error logging impersonation:', logError);
-                    // Continue anyway - logging failure shouldn't stop impersonation
+                    if (logError) {
+                        console.error('Error logging impersonation:', logError);
+                    }
+                } catch (e) {
+                    console.error('Failed to log impersonation:', e);
                 }
 
-                // Get target user's auth data
-                const { data: targetUser, error: userError } = await supabase
-                    .from('users')
-                    .select('*')
-                    .eq('id', userId)
-                    .single();
+            } catch (err) {
+                console.error('Failed to copy: ', err);
 
-                if (userError) throw userError;
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = url;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
 
-                // Don't sign out admin session yet - keep it for the impersonation API call
-                // Store impersonation data and redirect
-                const impersonationData = {
-                    ...adminData,
-                    targetUserId: userId,
-                    targetUserEmail: userEmail
-                };
-
-                localStorage.setItem('pendingImpersonation', JSON.stringify(impersonationData));
-
-                // Open user dashboard in new tab for impersonation
-                const redirectUrl = `index.html?impersonate=${userId}&admin=${currentUser.id}`;
-                console.log('Opening impersonation in new tab:', redirectUrl);
-
-                // Open in new tab - this works in all environments including iframes
-                window.open(redirectUrl, '_blank');
-
-            } catch (error) {
-                console.error('Error starting impersonation:', error);
-                alert('Failed to start impersonation session: ' + error.message);
+                copyBtn.textContent = '✓ Copied!';
+                copyBtn.classList.add('success');
+                setTimeout(() => {
+                    copyBtn.textContent = 'Copy URL';
+                    copyBtn.classList.remove('success');
+                }, 2000);
             }
         }
+
+        // Close modal when clicking outside
+        document.addEventListener('click', function(event) {
+            const modal = document.getElementById('impersonationModal');
+            if (event.target === modal) {
+                closeImpersonationModal();
+            }
+        });
 
         // Order Management Functions
         async function editOrder(orderId) {
@@ -2751,7 +2861,34 @@ Note: This is a simulation. Real orders will trigger actual GoHighLevel API call
         // All field mapping functionality moved to accordion functions above
     </script>
 
-    <!-- Modal removed - using accordion instead -->
+    <!-- Impersonation Modal -->
+    <div id="impersonationModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>🔍 Login as User</h2>
+                <p>Open this URL in a new tab/window to impersonate <strong id="modalUserEmail"></strong></p>
+            </div>
+
+            <div class="impersonation-url" id="impersonationUrl">
+                <!-- URL will be inserted here -->
+            </div>
+
+            <div style="background: #e8f4fd; border: 1px solid #bee5eb; border-radius: 4px; padding: 12px; margin: 16px 0; font-size: 14px;">
+                <strong>Instructions:</strong>
+                <ol style="margin: 8px 0 0 20px; padding: 0;">
+                    <li>Copy the URL above</li>
+                    <li>Open a new tab/window in your browser</li>
+                    <li>Paste the URL and press Enter</li>
+                    <li>You'll be logged in as the user for debugging</li>
+                </ol>
+            </div>
+
+            <div class="modal-buttons">
+                <button class="copy-btn" onclick="copyImpersonationUrl()">Copy URL</button>
+                <button class="action-btn btn-secondary" onclick="closeImpersonationModal()">Close</button>
+            </div>
+        </div>
+    </div>
 
 </body>
 </html>
