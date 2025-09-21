@@ -1329,6 +1329,15 @@
                 sessionStorage.setItem('impersonationState', JSON.stringify(impersonationState));
 
                 console.log('Impersonation mode active:', targetUser.email);
+
+                // Continue with user validation (API key check, etc.)
+                // Check if user has completed setup (has API key) - only for non-admin users
+                if (!currentUser.api_key && currentUser.role !== 'admin') {
+                    alert(`User "${currentUser.email}" has not completed their account setup (missing API key). Cannot impersonate.`);
+                    window.location.href = 'admin.html';
+                    return false;
+                }
+
                 return true; // Successfully authenticated via impersonation
 
             } catch (error) {
