@@ -23,18 +23,40 @@ export default async function handler(req, res) {
       });
     }
 
-    // Get pipelines from GoHighLevel - using location-based endpoint like tags
-    const response = await fetch(`https://services.leadconnectorhq.com/locations/${locationId}/pipelines`, {
+    // Get pipelines from GoHighLevel - using the correct opportunities endpoint
+    const url = `https://services.leadconnectorhq.com/opportunities/pipelines?locationId=${locationId}`;
+    const headers = {
+      'Authorization': `Bearer ${privateToken}`,
+      'Version': '2021-07-28',
+      'Content-Type': 'application/json'
+    };
+
+    console.log('Pipelines API Request:', {
+      url,
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${privateToken}`,
-        'Version': '2021-07-28',
-        'Content-Type': 'application/json'
-      }
+        'Authorization': `Bearer ${privateToken.substring(0, 8)}...`,
+        'Version': headers.Version,
+        'Content-Type': headers['Content-Type']
+      },
+      locationId
+    });
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers
     });
 
     if (!response.ok) {
-      throw new Error(`API request failed: ${response.status} ${await response.text()}`);
+      const errorText = await response.text();
+      console.error(`Pipelines API Error Details:`, {
+        status: response.status,
+        statusText: response.statusText,
+        errorBody: errorText,
+        url: response.url,
+        headers: Object.fromEntries(response.headers.entries())
+      });
+      throw new Error(`API request failed: ${response.status} ${response.statusText} - ${errorText}`);
     }
 
     const data = await response.json();
