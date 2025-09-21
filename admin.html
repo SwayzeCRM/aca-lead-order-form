@@ -1178,8 +1178,7 @@
         }
 
         async function loadSettings() {
-            // Load field mapping status
-            await loadFieldMappingStatus();
+            // Field mapping now handled by accordion
             try {
                 const { data: settings, error } = await supabase
                     .from('admin_settings')
