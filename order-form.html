@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<!-- CACHE BUSTER v2025.01.21-17:30 - CONTINUE BUTTON ADDED -->
+<!-- EMERGENCY CACHE BUSTER v2025.01.21-18:00 - BUTTON FORCED VISIBLE -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ACA Lead Order Form - CONTINUE BUTTON v2025.01.21</title>
+    <title>ACA Lead Order Form - EMERGENCY BUTTON FIX v2025.01.21</title>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <style>
         * {
@@ -838,6 +838,30 @@
                             <input type="radio" id="agency" name="orderType" value="agency">
                             <label for="agency">Agency NPN</label>
                         </div>
+                    </div>
+
+                    <!-- EMERGENCY ALWAYS VISIBLE BUTTON - NO JAVASCRIPT NEEDED -->
+                    <div style="margin: 40px 0; text-align: center; padding: 30px; background: #ff6b6b; color: white; border-radius: 10px; border: 5px solid #ff5252;">
+                        <h2 style="margin: 0 0 15px 0; font-size: 24px;">🚨 EMERGENCY CONTINUE BUTTON 🚨</h2>
+                        <p style="margin: 0 0 20px 0; font-size: 16px;">Select Individual or Agency above, then click this button!</p>
+                        <button type="button" onclick="
+                            var selected = document.querySelector('input[name=orderType]:checked');
+                            if (!selected) { alert('Please select Individual NPN or Agency NPN first!'); return; }
+                            var indForm = document.getElementById('individualForm');
+                            var agForm = document.getElementById('agencyForm');
+                            if (selected.value === 'individual') {
+                                indForm.style.display = 'block';
+                                agForm.style.display = 'none';
+                                indForm.scrollIntoView();
+                            } else {
+                                agForm.style.display = 'block';
+                                indForm.style.display = 'none';
+                                agForm.scrollIntoView();
+                            }
+                            this.parentElement.style.display = 'none';
+                        " style="background: #ffffff; color: #ff6b6b; padding: 20px 50px; border: 3px solid #ff6b6b; border-radius: 8px; font-size: 20px; font-weight: bold; cursor: pointer;">
+                            CONTINUE TO FORM →
+                        </button>
                     </div>
 
                     <!-- Continue Button - Always visible, enabled after selection -->
