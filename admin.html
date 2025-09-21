@@ -624,57 +624,109 @@
 
                 <div class="settings-section">
                     <h3>Order Workflow Automation</h3>
-                    <p style="color: #7f8c8d; font-size: 14px; margin-bottom: 16px;">
-                        Configure what happens automatically in GoHighLevel when a new order is placed.
+                    <p style="color: #7f8c8d; font-size: 14px; margin-bottom: 24px;">
+                        Configure what happens automatically in GoHighLevel when a new order is placed. Workflow automation is always enabled.
                     </p>
 
-                    <div class="form-group">
-                        <label style="display: flex; align-items: center; gap: 8px;">
-                            <input type="checkbox" id="workflowEnabled" style="margin: 0;">
-                            Enable Order Workflow Automation
-                        </label>
-                        <div class="help-text">Automatically perform actions in GoHighLevel when orders are placed</div>
+                    <!-- Contact Management Section -->
+                    <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 24px;">
+                        <h4 style="margin: 0 0 16px 0; color: #2c3e50; display: flex; align-items: center; gap: 8px;">
+                            <input type="checkbox" id="createUpdateContact" checked style="margin: 0;">
+                            Contact Management
+                        </h4>
+                        <p style="color: #6c757d; margin: 0 0 16px 28px; font-size: 14px;">
+                            Create new contact or update existing contact with order information
+                        </p>
+
+                        <div style="margin-left: 28px;">
+                            <h5 style="margin: 0 0 12px 0; color: #495057;">Field Mapping</h5>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                                <div>
+                                    <label style="display: block; margin-bottom: 4px; font-weight: 500;">Customer Name →</label>
+                                    <select id="nameFieldMapping" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                        <option value="">Select GoHighLevel field...</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style="display: block; margin-bottom: 4px; font-weight: 500;">Customer Email →</label>
+                                    <select id="emailFieldMapping" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                        <option value="">Select GoHighLevel field...</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style="display: block; margin-bottom: 4px; font-weight: 500;">Customer Phone →</label>
+                                    <select id="phoneFieldMapping" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                        <option value="">Select GoHighLevel field...</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style="display: block; margin-bottom: 4px; font-weight: 500;">Order Total →</label>
+                                    <select id="orderValueFieldMapping" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                        <option value="">Select GoHighLevel field...</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <button class="action-btn" style="margin-top: 12px; background: #6c757d;" onclick="loadCustomFields()">
+                                🔄 Load GoHighLevel Fields
+                            </button>
+                        </div>
                     </div>
 
-                    <div id="workflowSettings" style="margin-top: 20px;">
-                        <h4 style="margin-bottom: 16px; color: #2c3e50;">Workflow Actions</h4>
+                    <!-- Pipeline Management Section -->
+                    <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 24px;">
+                        <h4 style="margin: 0 0 16px 0; color: #2c3e50; display: flex; align-items: center; gap: 8px;">
+                            <input type="checkbox" id="addToPipeline" style="margin: 0;">
+                            Pipeline Management
+                        </h4>
+                        <p style="color: #6c757d; margin: 0 0 16px 28px; font-size: 14px;">
+                            Create opportunity in specified pipeline and stage
+                        </p>
 
-                        <div class="form-group">
-                            <label style="display: flex; align-items: center; gap: 8px;">
-                                <input type="checkbox" id="createUpdateContact" style="margin: 0;">
-                                Create/Update Contact
-                            </label>
-                            <div class="help-text">Create new contact or update existing contact with order information</div>
-                        </div>
-
-                        <div class="form-group">
-                            <label style="display: flex; align-items: center; gap: 8px;">
-                                <input type="checkbox" id="addToPipeline" style="margin: 0;">
-                                Add to Pipeline
-                            </label>
-                            <div class="help-text">Create opportunity in specified pipeline</div>
-                            <div style="margin-top: 8px;">
-                                <input type="text" id="pipelineId" placeholder="Pipeline ID (e.g., 7GoVuBJb4WadoAr0L5Q7)" style="margin-top: 4px;">
-                                <div class="help-text">Get Pipeline ID from GoHighLevel → Opportunities → Pipeline Settings</div>
+                        <div style="margin-left: 28px;">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 12px;">
+                                <div>
+                                    <label style="display: block; margin-bottom: 4px; font-weight: 500;">Pipeline *</label>
+                                    <select id="pipelineSelect" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" onchange="loadPipelineStages()">
+                                        <option value="">Select pipeline...</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style="display: block; margin-bottom: 4px; font-weight: 500;">Stage *</label>
+                                    <select id="stageSelect" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" disabled>
+                                        <option value="">Select pipeline first...</option>
+                                    </select>
+                                </div>
                             </div>
+                            <button class="action-btn" style="background: #6c757d;" onclick="loadPipelines()">
+                                🔄 Load Pipelines
+                            </button>
                         </div>
+                    </div>
 
-                        <div class="form-group">
-                            <label style="display: flex; align-items: center; gap: 8px;">
-                                <input type="checkbox" id="addTags" style="margin: 0;">
-                                Add Tags
-                            </label>
-                            <div class="help-text">Add tags to contact when order is placed</div>
-                            <div style="margin-top: 8px;">
-                                <input type="text" id="orderTags" placeholder="e.g., new-order, aca-customer" style="margin-top: 4px;">
-                                <div class="help-text">Comma-separated list of tags to add</div>
+                    <!-- Tagging Section -->
+                    <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 24px;">
+                        <h4 style="margin: 0 0 16px 0; color: #2c3e50; display: flex; align-items: center; gap: 8px;">
+                            <input type="checkbox" id="addTags" style="margin: 0;">
+                            Contact Tagging
+                        </h4>
+                        <p style="color: #6c757d; margin: 0 0 16px 28px; font-size: 14px;">
+                            Add tags to contact when order is placed
+                        </p>
+
+                        <div style="margin-left: 28px;">
+                            <label style="display: block; margin-bottom: 4px; font-weight: 500;">Tags</label>
+                            <div style="position: relative;">
+                                <input type="text" id="tagSearchInput" placeholder="Search tags or type to create new..."
+                                       style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;"
+                                       oninput="searchTags()" onclick="showTagDropdown()">
+                                <div id="tagDropdown" style="position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ddd; border-top: none; border-radius: 0 0 4px 4px; max-height: 200px; overflow-y: auto; display: none; z-index: 1000;">
+                                </div>
                             </div>
-                        </div>
-
-                        <div class="form-group">
-                            <label>Order Value Field</label>
-                            <input type="text" id="orderValueField" placeholder="Custom field name for order value">
-                            <div class="help-text">Custom field in GoHighLevel to store order total (optional)</div>
+                            <div id="selectedTags" style="margin-top: 8px; display: flex; flex-wrap: gap: 6px;">
+                            </div>
+                            <button class="action-btn" style="margin-top: 12px; background: #6c757d;" onclick="loadTags()">
+                                🔄 Load Tags
+                            </button>
                         </div>
                     </div>
 
@@ -1151,13 +1203,29 @@
                 document.getElementById('defaultPipelineId').value = settingsMap.default_pipeline_id || '';
 
                 // Populate workflow settings
-                document.getElementById('workflowEnabled').checked = settingsMap.workflow_enabled === 'true';
-                document.getElementById('createUpdateContact').checked = settingsMap.workflow_create_contact === 'true';
+                document.getElementById('createUpdateContact').checked = settingsMap.workflow_create_contact !== 'false'; // Default true
                 document.getElementById('addToPipeline').checked = settingsMap.workflow_add_pipeline === 'true';
                 document.getElementById('addTags').checked = settingsMap.workflow_add_tags === 'true';
-                document.getElementById('pipelineId').value = settingsMap.workflow_pipeline_id || '';
-                document.getElementById('orderTags').value = settingsMap.workflow_order_tags || '';
-                document.getElementById('orderValueField').value = settingsMap.workflow_order_value_field || '';
+
+                // Field mappings
+                if (settingsMap.workflow_name_field) document.getElementById('nameFieldMapping').value = settingsMap.workflow_name_field;
+                if (settingsMap.workflow_email_field) document.getElementById('emailFieldMapping').value = settingsMap.workflow_email_field;
+                if (settingsMap.workflow_phone_field) document.getElementById('phoneFieldMapping').value = settingsMap.workflow_phone_field;
+                if (settingsMap.workflow_order_value_field) document.getElementById('orderValueFieldMapping').value = settingsMap.workflow_order_value_field;
+
+                // Pipeline settings
+                if (settingsMap.workflow_pipeline_id) document.getElementById('pipelineSelect').value = settingsMap.workflow_pipeline_id;
+                if (settingsMap.workflow_stage_id) document.getElementById('stageSelect').value = settingsMap.workflow_stage_id;
+
+                // Load saved tags
+                if (settingsMap.workflow_tags) {
+                    try {
+                        selectedWorkflowTags = JSON.parse(settingsMap.workflow_tags) || [];
+                        updateSelectedTagsDisplay();
+                    } catch (e) {
+                        selectedWorkflowTags = [];
+                    }
+                }
 
             } catch (error) {
                 console.error('Error loading settings:', error);
@@ -1624,25 +1692,39 @@
             }
         }
 
+        // Global variables for workflow data
+        let availableCustomFields = [];
+        let availablePipelines = [];
+        let availableTags = [];
+        let selectedWorkflowTags = [];
+
         // Workflow Settings Functions
         async function saveWorkflowSettings() {
             try {
-                const workflowEnabled = document.getElementById('workflowEnabled').checked;
                 const createUpdateContact = document.getElementById('createUpdateContact').checked;
                 const addToPipeline = document.getElementById('addToPipeline').checked;
                 const addTags = document.getElementById('addTags').checked;
-                const pipelineId = document.getElementById('pipelineId').value;
-                const orderTags = document.getElementById('orderTags').value;
-                const orderValueField = document.getElementById('orderValueField').value;
+
+                const nameFieldMapping = document.getElementById('nameFieldMapping').value;
+                const emailFieldMapping = document.getElementById('emailFieldMapping').value;
+                const phoneFieldMapping = document.getElementById('phoneFieldMapping').value;
+                const orderValueFieldMapping = document.getElementById('orderValueFieldMapping').value;
+
+                const pipelineId = document.getElementById('pipelineSelect').value;
+                const stageId = document.getElementById('stageSelect').value;
 
                 const updates = [
-                    { setting_key: 'workflow_enabled', setting_value: workflowEnabled.toString() },
+                    { setting_key: 'workflow_enabled', setting_value: 'true' }, // Always enabled
                     { setting_key: 'workflow_create_contact', setting_value: createUpdateContact.toString() },
                     { setting_key: 'workflow_add_pipeline', setting_value: addToPipeline.toString() },
                     { setting_key: 'workflow_add_tags', setting_value: addTags.toString() },
                     { setting_key: 'workflow_pipeline_id', setting_value: pipelineId },
-                    { setting_key: 'workflow_order_tags', setting_value: orderTags },
-                    { setting_key: 'workflow_order_value_field', setting_value: orderValueField }
+                    { setting_key: 'workflow_stage_id', setting_value: stageId },
+                    { setting_key: 'workflow_tags', setting_value: JSON.stringify(selectedWorkflowTags) },
+                    { setting_key: 'workflow_name_field', setting_value: nameFieldMapping },
+                    { setting_key: 'workflow_email_field', setting_value: emailFieldMapping },
+                    { setting_key: 'workflow_phone_field', setting_value: phoneFieldMapping },
+                    { setting_key: 'workflow_order_value_field', setting_value: orderValueFieldMapping }
                 ];
 
                 for (const update of updates) {
@@ -1652,12 +1734,20 @@
                 }
 
                 await logAdminActivity('workflow_settings_update', 'settings', null, {
-                    workflow_enabled: workflowEnabled,
                     actions: {
                         create_contact: createUpdateContact,
                         add_pipeline: addToPipeline,
                         add_tags: addTags
-                    }
+                    },
+                    mappings: {
+                        name_field: nameFieldMapping,
+                        email_field: emailFieldMapping,
+                        phone_field: phoneFieldMapping,
+                        order_value_field: orderValueFieldMapping
+                    },
+                    pipeline_id: pipelineId,
+                    stage_id: stageId,
+                    tags_count: selectedWorkflowTags.length
                 });
 
                 showWorkflowResult('✅ Workflow settings saved successfully!', 'success');
@@ -1670,13 +1760,6 @@
 
         async function testWorkflow() {
             try {
-                const workflowEnabled = document.getElementById('workflowEnabled').checked;
-
-                if (!workflowEnabled) {
-                    showWorkflowResult('⚠️ Workflow is disabled. Enable it first to test.', 'error');
-                    return;
-                }
-
                 const privateToken = document.getElementById('ghlPrivateToken').value;
                 const locationId = document.getElementById('ghlLocationId').value;
 
@@ -1691,31 +1774,46 @@
                 const testOrderData = {
                     customerEmail: 'test@example.com',
                     customerName: 'Test Customer',
+                    customerPhone: '+1234567890',
                     orderTotal: 99.99,
                     orderId: 'TEST-' + Date.now()
                 };
 
                 // Check which actions are enabled
                 const actions = [];
-                if (document.getElementById('createUpdateContact').checked) actions.push('✓ Create/Update Contact');
-                if (document.getElementById('addToPipeline').checked) actions.push('✓ Add to Pipeline');
-                if (document.getElementById('addTags').checked) actions.push('✓ Add Tags');
+                if (document.getElementById('createUpdateContact').checked) {
+                    actions.push(`✓ Create/Update Contact (${testOrderData.customerName})`);
+                }
+                if (document.getElementById('addToPipeline').checked) {
+                    const pipelineName = document.getElementById('pipelineSelect').selectedOptions[0]?.text || 'Selected Pipeline';
+                    const stageName = document.getElementById('stageSelect').selectedOptions[0]?.text || 'Selected Stage';
+                    actions.push(`✓ Add to Pipeline: ${pipelineName} → ${stageName}`);
+                }
+                if (document.getElementById('addTags').checked && selectedWorkflowTags.length > 0) {
+                    actions.push(`✓ Add Tags: ${selectedWorkflowTags.map(tag => tag.name).join(', ')}`);
+                }
 
                 if (actions.length === 0) {
                     showWorkflowResult('⚠️ No workflow actions are enabled. Please enable at least one action.', 'error');
                     return;
                 }
 
-                // Simulate success (in real implementation, this would call GoHighLevel APIs)
+                // Simulate success
                 setTimeout(() => {
                     showWorkflowResult(`✅ Workflow Test Successful!
 
 Test Order: ${testOrderData.orderId}
-Customer: ${testOrderData.customerName}
+Customer: ${testOrderData.customerName} (${testOrderData.customerEmail})
 Total: $${testOrderData.orderTotal}
 
 Actions that would be performed:
 ${actions.join('\n')}
+
+Field Mappings:
+• Name → ${document.getElementById('nameFieldMapping').selectedOptions[0]?.text || 'Not mapped'}
+• Email → ${document.getElementById('emailFieldMapping').selectedOptions[0]?.text || 'Not mapped'}
+• Phone → ${document.getElementById('phoneFieldMapping').selectedOptions[0]?.text || 'Not mapped'}
+• Order Value → ${document.getElementById('orderValueFieldMapping').selectedOptions[0]?.text || 'Not mapped'}
 
 Note: This is a simulation. Real orders will trigger actual GoHighLevel API calls.`, 'success');
                 }, 2000);
@@ -1725,6 +1823,326 @@ Note: This is a simulation. Real orders will trigger actual GoHighLevel API call
                 showWorkflowResult('❌ Error testing workflow: ' + error.message, 'error');
             }
         }
+
+        // Load GoHighLevel Data Functions
+        async function loadCustomFields() {
+            try {
+                const privateToken = document.getElementById('ghlPrivateToken').value;
+                const locationId = document.getElementById('ghlLocationId').value;
+
+                if (!privateToken || !locationId) {
+                    showWorkflowResult('❌ Please configure Private Integration Token and Location ID first', 'error');
+                    return;
+                }
+
+                showWorkflowResult('Loading custom fields...', 'info');
+
+                const response = await fetch('/api/ghl/get-custom-fields', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        privateToken,
+                        locationId
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    availableCustomFields = data.customFields;
+
+                    // Standard contact fields
+                    const standardFields = [
+                        { id: 'firstName', name: 'First Name' },
+                        { id: 'lastName', name: 'Last Name' },
+                        { id: 'name', name: 'Full Name' },
+                        { id: 'email', name: 'Email' },
+                        { id: 'phone', name: 'Phone' }
+                    ];
+
+                    const allFields = [...standardFields, ...availableCustomFields];
+
+                    // Populate dropdowns
+                    populateFieldDropdown('nameFieldMapping', allFields, 'name');
+                    populateFieldDropdown('emailFieldMapping', allFields, 'email');
+                    populateFieldDropdown('phoneFieldMapping', allFields, 'phone');
+                    populateFieldDropdown('orderValueFieldMapping', allFields);
+
+                    showWorkflowResult(`✅ Loaded ${data.customFields.length} custom fields + ${standardFields.length} standard fields`, 'success');
+                } else {
+                    showWorkflowResult(data.message, 'error');
+                }
+
+            } catch (error) {
+                console.error('Error loading custom fields:', error);
+                showWorkflowResult('❌ Error loading custom fields: ' + error.message, 'error');
+            }
+        }
+
+        function populateFieldDropdown(selectId, fields, defaultValue = '') {
+            const select = document.getElementById(selectId);
+            select.innerHTML = '<option value="">Select GoHighLevel field...</option>';
+
+            fields.forEach(field => {
+                const option = document.createElement('option');
+                option.value = field.id;
+                option.textContent = field.name;
+                if (field.id === defaultValue) {
+                    option.selected = true;
+                }
+                select.appendChild(option);
+            });
+        }
+
+        async function loadPipelines() {
+            try {
+                const privateToken = document.getElementById('ghlPrivateToken').value;
+                const locationId = document.getElementById('ghlLocationId').value;
+
+                if (!privateToken || !locationId) {
+                    showWorkflowResult('❌ Please configure Private Integration Token and Location ID first', 'error');
+                    return;
+                }
+
+                showWorkflowResult('Loading pipelines...', 'info');
+
+                const response = await fetch('/api/ghl/get-pipelines', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        privateToken,
+                        locationId
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    availablePipelines = data.pipelines;
+
+                    const select = document.getElementById('pipelineSelect');
+                    select.innerHTML = '<option value="">Select pipeline...</option>';
+
+                    data.pipelines.forEach(pipeline => {
+                        const option = document.createElement('option');
+                        option.value = pipeline.id;
+                        option.textContent = pipeline.name;
+                        select.appendChild(option);
+                    });
+
+                    showWorkflowResult(`✅ Loaded ${data.pipelines.length} pipelines`, 'success');
+                } else {
+                    showWorkflowResult(data.message, 'error');
+                }
+
+            } catch (error) {
+                console.error('Error loading pipelines:', error);
+                showWorkflowResult('❌ Error loading pipelines: ' + error.message, 'error');
+            }
+        }
+
+        function loadPipelineStages() {
+            const pipelineSelect = document.getElementById('pipelineSelect');
+            const stageSelect = document.getElementById('stageSelect');
+            const selectedPipelineId = pipelineSelect.value;
+
+            if (!selectedPipelineId) {
+                stageSelect.innerHTML = '<option value="">Select pipeline first...</option>';
+                stageSelect.disabled = true;
+                return;
+            }
+
+            const pipeline = availablePipelines.find(p => p.id === selectedPipelineId);
+
+            if (pipeline && pipeline.stages) {
+                stageSelect.innerHTML = '<option value="">Select stage...</option>';
+                pipeline.stages.forEach(stage => {
+                    const option = document.createElement('option');
+                    option.value = stage.id;
+                    option.textContent = stage.name;
+                    stageSelect.appendChild(option);
+                });
+                stageSelect.disabled = false;
+            } else {
+                stageSelect.innerHTML = '<option value="">No stages found</option>';
+                stageSelect.disabled = true;
+            }
+        }
+
+        async function loadTags() {
+            try {
+                const privateToken = document.getElementById('ghlPrivateToken').value;
+                const locationId = document.getElementById('ghlLocationId').value;
+
+                if (!privateToken || !locationId) {
+                    showWorkflowResult('❌ Please configure Private Integration Token and Location ID first', 'error');
+                    return;
+                }
+
+                showWorkflowResult('Loading tags...', 'info');
+
+                const response = await fetch('/api/ghl/test-tags', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        privateToken,
+                        locationId
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Assuming the response contains tags data
+                    availableTags = data.data?.tags || [];
+                    showWorkflowResult(`✅ Loaded ${availableTags.length} tags`, 'success');
+                } else {
+                    showWorkflowResult(data.message, 'error');
+                }
+
+            } catch (error) {
+                console.error('Error loading tags:', error);
+                showWorkflowResult('❌ Error loading tags: ' + error.message, 'error');
+            }
+        }
+
+        // Tag Management Functions
+        function searchTags() {
+            const input = document.getElementById('tagSearchInput');
+            const dropdown = document.getElementById('tagDropdown');
+            const searchTerm = input.value.toLowerCase();
+
+            if (searchTerm.length === 0) {
+                dropdown.style.display = 'none';
+                return;
+            }
+
+            const filteredTags = availableTags.filter(tag =>
+                tag.name.toLowerCase().includes(searchTerm) &&
+                !selectedWorkflowTags.some(selected => selected.id === tag.id)
+            );
+
+            let dropdownContent = '';
+
+            // Show existing tags
+            filteredTags.forEach(tag => {
+                dropdownContent += `<div style="padding: 8px; cursor: pointer; border-bottom: 1px solid #eee;" onclick="selectTag('${tag.id}', '${tag.name}')">
+                    ${tag.name}
+                </div>`;
+            });
+
+            // Show create option if no exact match
+            const exactMatch = availableTags.some(tag => tag.name.toLowerCase() === searchTerm);
+            if (!exactMatch && searchTerm.trim()) {
+                dropdownContent += `<div style="padding: 8px; cursor: pointer; background: #f8f9fa; color: #007bff; border-bottom: 1px solid #eee;" onclick="createAndSelectTag('${searchTerm.trim()}')">
+                    + Create "${searchTerm.trim()}"
+                </div>`;
+            }
+
+            dropdown.innerHTML = dropdownContent;
+            dropdown.style.display = dropdownContent ? 'block' : 'none';
+        }
+
+        function showTagDropdown() {
+            const dropdown = document.getElementById('tagDropdown');
+            let dropdownContent = '';
+
+            availableTags.forEach(tag => {
+                if (!selectedWorkflowTags.some(selected => selected.id === tag.id)) {
+                    dropdownContent += `<div style="padding: 8px; cursor: pointer; border-bottom: 1px solid #eee;" onclick="selectTag('${tag.id}', '${tag.name}')">
+                        ${tag.name}
+                    </div>`;
+                }
+            });
+
+            dropdown.innerHTML = dropdownContent;
+            dropdown.style.display = dropdownContent ? 'block' : 'none';
+        }
+
+        function selectTag(tagId, tagName) {
+            if (!selectedWorkflowTags.some(tag => tag.id === tagId)) {
+                selectedWorkflowTags.push({ id: tagId, name: tagName });
+                updateSelectedTagsDisplay();
+            }
+            document.getElementById('tagSearchInput').value = '';
+            document.getElementById('tagDropdown').style.display = 'none';
+        }
+
+        async function createAndSelectTag(tagName) {
+            try {
+                const privateToken = document.getElementById('ghlPrivateToken').value;
+                const locationId = document.getElementById('ghlLocationId').value;
+
+                showWorkflowResult(`Creating tag "${tagName}"...`, 'info');
+
+                const response = await fetch('/api/ghl/create-tag', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        privateToken,
+                        locationId,
+                        tagName
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    const newTag = { id: data.tag.id, name: tagName };
+                    availableTags.push(newTag);
+                    selectedWorkflowTags.push(newTag);
+                    updateSelectedTagsDisplay();
+                    showWorkflowResult(`✅ Tag "${tagName}" created and selected`, 'success');
+                } else {
+                    showWorkflowResult(data.message, 'error');
+                }
+
+                document.getElementById('tagSearchInput').value = '';
+                document.getElementById('tagDropdown').style.display = 'none';
+
+            } catch (error) {
+                console.error('Error creating tag:', error);
+                showWorkflowResult('❌ Error creating tag: ' + error.message, 'error');
+            }
+        }
+
+        function updateSelectedTagsDisplay() {
+            const container = document.getElementById('selectedTags');
+            container.innerHTML = '';
+
+            selectedWorkflowTags.forEach(tag => {
+                const tagElement = document.createElement('span');
+                tagElement.style.cssText = 'background: #007bff; color: white; padding: 4px 8px; border-radius: 12px; font-size: 12px; display: flex; align-items: center; gap: 4px;';
+                tagElement.innerHTML = `
+                    ${tag.name}
+                    <span onclick="removeTag('${tag.id}')" style="cursor: pointer; font-weight: bold;">&times;</span>
+                `;
+                container.appendChild(tagElement);
+            });
+        }
+
+        function removeTag(tagId) {
+            selectedWorkflowTags = selectedWorkflowTags.filter(tag => tag.id !== tagId);
+            updateSelectedTagsDisplay();
+        }
+
+        // Hide dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            const tagInput = document.getElementById('tagSearchInput');
+            const tagDropdown = document.getElementById('tagDropdown');
+
+            if (tagInput && tagDropdown && !tagInput.contains(event.target) && !tagDropdown.contains(event.target)) {
+                tagDropdown.style.display = 'none';
+            }
+        });
 
         function showWorkflowResult(message, type) {
             const resultDiv = document.getElementById('workflowResult');
