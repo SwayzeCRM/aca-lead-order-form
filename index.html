@@ -830,8 +830,14 @@
 
         async function initializeAuth() {
             const urlParams = new URLSearchParams(window.location.search);
-            const email = urlParams.get('email');
+            let email = urlParams.get('email');
             const locationId = urlParams.get('location_id');
+
+            // Clean up email parameter - remove any trailing } characters
+            if (email) {
+                email = email.replace(/[}]+$/, '').trim();
+                console.log('Cleaned email parameter:', email);
+            }
             const impersonateUserId = urlParams.get('impersonate');
             const adminId = urlParams.get('admin');
             const pendingImpersonation = localStorage.getItem('pendingImpersonation');
