@@ -10,8 +10,18 @@ export default async function handler(req, res) {
     return;
   }
 
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+  // Accept both GET and POST for debugging
+  if (req.method !== 'POST' && req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method not allowed. Use POST.' });
+  }
+
+  // For GET requests, return a test response
+  if (req.method === 'GET') {
+    return res.status(200).json({
+      success: true,
+      message: 'API endpoint is working. Use POST with privateToken.',
+      locations: []
+    });
   }
 
   try {

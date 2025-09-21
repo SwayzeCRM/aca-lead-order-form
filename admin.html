@@ -1273,7 +1273,7 @@
 
                 showPrivateTokenResult('🔍 Finding your GoHighLevel locations...', 'info');
 
-                const response = await fetch('/api/ghl/get-locations.js', {
+                const response = await fetch('/api/ghl/get-locations', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -2348,7 +2348,7 @@ Note: This is a simulation. Real orders will trigger actual GoHighLevel API call
 
             // Load GoHighLevel custom fields
             try {
-                const response = await fetch('/api/ghl/get-custom-fields.js', {
+                const response = await fetch('/api/ghl/get-custom-fields', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -2359,11 +2359,31 @@ Note: This is a simulation. Real orders will trigger actual GoHighLevel API call
                     })
                 });
 
-                const data = await response.json();
+                // Check if response is ok before parsing JSON
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('API Response Error:', {
+                        status: response.status,
+                        statusText: response.statusText,
+                        url: response.url,
+                        body: errorText
+                    });
+                    throw new Error(`API request failed: ${response.status} ${response.statusText} - ${errorText}`);
+                }
+
+                let data;
+                try {
+                    data = await response.json();
+                } catch (jsonError) {
+                    console.error('JSON parsing failed:', jsonError);
+                    const responseText = await response.text();
+                    console.error('Response body:', responseText);
+                    throw new Error(`Invalid JSON response from API: ${jsonError.message}`);
+                }
 
                 if (data.success && data.customFields) {
                     ghlCustomFields = data.customFields;
-                    populateFieldMapping();
+                    await populateFieldMapping();
                     document.getElementById('fieldMappingModal').classList.add('show');
                     document.body.style.overflow = 'hidden';
                 } else {

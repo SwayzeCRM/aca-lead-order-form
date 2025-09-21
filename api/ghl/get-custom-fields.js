@@ -5,13 +5,24 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
+  // Handle preflight OPTIONS request
   if (req.method === 'OPTIONS') {
     res.status(200).end();
     return;
   }
 
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+  // Accept both GET and POST for debugging
+  if (req.method !== 'POST' && req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method not allowed. Use POST.' });
+  }
+
+  // For GET requests, return a test response
+  if (req.method === 'GET') {
+    return res.status(200).json({
+      success: true,
+      message: 'API endpoint is working. Use POST with privateToken and locationId.',
+      customFields: []
+    });
   }
 
   try {
