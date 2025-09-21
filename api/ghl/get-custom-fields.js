@@ -62,16 +62,43 @@ export default async function handler(req, res) {
     const data = await response.json();
 
     // Log the response for debugging
-    console.log('Custom Fields API response:', data);
+    console.log('Custom Fields API response:', JSON.stringify(data, null, 2));
 
     // Handle response structure based on API documentation
-    const customFields = data.customFields || [];
+    let customFields = [];
+
+    if (Array.isArray(data)) {
+      // If data is directly an array
+      customFields = data;
+    } else if (data.customFields && Array.isArray(data.customFields)) {
+      // If data has customFields property
+      customFields = data.customFields;
+    } else if (data.data && Array.isArray(data.data)) {
+      // If data has data property
+      customFields = data.data;
+    } else {
+      console.error('Unexpected custom fields response structure:', data);
+    }
+
+    // Transform custom fields to ensure they have the right structure
+    const processedFields = customFields.map(field => ({
+      id: field.fieldKey || field.key || field.id || field.name,
+      name: field.name || field.fieldKey || field.key || field.id,
+      type: field.dataType || field.type,
+      options: field.options || []
+    }));
+
+    console.log('Processed custom fields:', processedFields);
 
     res.status(200).json({
       success: true,
-      customFields: customFields,
-      message: `Found ${customFields.length || 0} custom fields`,
-      debug: data // Include raw response for debugging
+      customFields: processedFields,
+      message: `Found ${processedFields.length || 0} custom fields`,
+      debug: {
+        rawResponse: data,
+        originalLength: customFields.length,
+        processedLength: processedFields.length
+      }
     });
 
   } catch (error) {

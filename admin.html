@@ -1867,8 +1867,12 @@ Note: This is a simulation. Real orders will trigger actual GoHighLevel API call
 
                 const data = await response.json();
 
+                console.log('Custom fields response received:', data);
+
                 if (data.success) {
                     availableCustomFields = data.customFields || [];
+
+                    console.log('Available custom fields:', availableCustomFields);
 
                     // Standard contact fields
                     const standardFields = [
@@ -1880,6 +1884,8 @@ Note: This is a simulation. Real orders will trigger actual GoHighLevel API call
                     ];
 
                     const allFields = [...standardFields, ...availableCustomFields];
+
+                    console.log('All fields for dropdowns:', allFields);
 
                     // Populate dropdowns
                     populateFieldDropdown('nameFieldMapping', allFields, 'name');
