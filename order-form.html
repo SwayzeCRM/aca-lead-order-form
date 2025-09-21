@@ -846,6 +846,15 @@
                             Continue to Form →
                         </button>
                     </div>
+
+                    <!-- DEBUG: Show button always visible for testing -->
+                    <div id="debugButton" style="margin-top: 24px; text-align: center; background: #f39c12; padding: 12px; border-radius: 4px;">
+                        <strong>DEBUG:</strong> If you can see this orange box, HTML is loading correctly. Continue button should appear above when you select Individual or Agency.
+                        <br><br>
+                        <button type="button" onclick="document.getElementById('continueButtonContainer').style.display='block'; alert('Debug: Manually showing continue button')" style="background: #e74c3c; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer;">
+                            Manual Test: Show Continue Button
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Individual NPN Form -->
@@ -1133,6 +1142,7 @@
 
         // Initialize app
         document.addEventListener('DOMContentLoaded', async function() {
+            alert('DEBUG: JavaScript is running! Check console for order type logic messages.');
             await initializeAuth();
             await loadFormData();
             initializePurchasingForLogic();
