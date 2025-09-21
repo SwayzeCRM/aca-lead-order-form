@@ -1185,9 +1185,9 @@
                                     onclick="toggleUserStatus('${user.id}', ${user.is_active !== false})">
                                 ${user.is_active !== false ? 'Deactivate' : 'Activate'}
                             </button>
-                            <button class="action-btn btn-secondary" onclick="loginAsUser('${user.id}', '${user.email}')"
-                                    title="Login as this user for debugging">
-                                Login As
+                            <button class="action-btn btn-secondary" onclick="copyImpersonationUrl('${user.id}', '${user.email}')"
+                                    title="Copy impersonation URL to clipboard">
+                                Copy URL
                             </button>
                         </td>
                     </tr>
@@ -1681,122 +1681,19 @@
         }
 
         // User Impersonation Functions v2024.2
-        async function loginAsUser(userId, userEmail) {
-            console.log('=== IMPERSONATION DEBUG v2024.2 ===');
-            console.log('Function called with:', { userId, userEmail });
-            console.log('Current user:', currentUser);
-
+        function copyImpersonationUrl(userId, userEmail) {
             // Generate impersonation URL
-            const impersonationUrl = `${window.location.origin}/index.html?impersonate=${userId}&admin=${currentUser.id}`;
-            console.log('Generated URL:', impersonationUrl);
+            const impersonationUrl = `${window.location.origin}/order-form.html?impersonate=${userId}&admin=${currentUser.id}`;
 
-            // Show modal with URL and instructions
-            console.log('About to call showImpersonationModal...');
-            showImpersonationModal(userEmail, impersonationUrl, userId);
-            console.log('showImpersonationModal called');
-        }
-
-        function showImpersonationModal(userEmail, impersonationUrl, userId) {
-            console.log('=== MODAL DEBUG ===');
-            console.log('showImpersonationModal called with:', { userEmail, impersonationUrl, userId });
-
-            const modal = document.getElementById('impersonationModal');
-            const modalUserEmail = document.getElementById('modalUserEmail');
-            const urlContainer = document.getElementById('impersonationUrl');
-
-            console.log('Modal element found:', modal);
-            console.log('Modal user email element found:', modalUserEmail);
-            console.log('URL container element found:', urlContainer);
-
-            if (!modal) {
-                console.error('MODAL NOT FOUND! DOM element impersonationModal does not exist');
-                alert('Modal not found - showing URL instead: ' + impersonationUrl);
-                return;
-            }
-
-            modalUserEmail.textContent = userEmail;
-            urlContainer.textContent = impersonationUrl;
-
-            // Store URL for copying
-            modal.dataset.impersonationUrl = impersonationUrl;
-            modal.dataset.userId = userId;
-
-            console.log('About to add active class to modal...');
-            modal.classList.add('active');
-            console.log('Modal classes after adding active:', modal.classList.toString());
-            console.log('Modal display style:', window.getComputedStyle(modal).display);
-        }
-
-        function closeImpersonationModal() {
-            const modal = document.getElementById('impersonationModal');
-            modal.classList.remove('active');
-        }
-
-        async function copyImpersonationUrl() {
-            const modal = document.getElementById('impersonationModal');
-            const url = modal.dataset.impersonationUrl;
-            const copyBtn = document.querySelector('.copy-btn');
-
-            try {
-                await navigator.clipboard.writeText(url);
-
-                // Visual feedback
-                const originalText = copyBtn.textContent;
-                copyBtn.textContent = '✓ Copied!';
-                copyBtn.classList.add('success');
-
-                setTimeout(() => {
-                    copyBtn.textContent = originalText;
-                    copyBtn.classList.remove('success');
-                }, 2000);
-
-                // Log the impersonation start in database
-                const userId = modal.dataset.userId;
-                try {
-                    const { error: logError } = await supabase
-                        .from('impersonation_log')
-                        .insert({
-                            admin_id: currentUser.id,
-                            target_user_id: userId,
-                            reason: 'Admin debugging/testing',
-                            admin_ip_address: null,
-                            user_agent: navigator.userAgent
-                        });
-
-                    if (logError) {
-                        console.error('Error logging impersonation:', logError);
-                    }
-                } catch (e) {
-                    console.error('Failed to log impersonation:', e);
-                }
-
-            } catch (err) {
-                console.error('Failed to copy: ', err);
-
+            // Copy to clipboard
+            navigator.clipboard.writeText(impersonationUrl).then(() => {
+                alert(`Impersonation URL copied to clipboard!\n\nUser: ${userEmail}\nURL: ${impersonationUrl}\n\nPaste this URL in a new tab to login as this user.`);
+            }).catch(() => {
                 // Fallback for older browsers
-                const textArea = document.createElement('textarea');
-                textArea.value = url;
-                document.body.appendChild(textArea);
-                textArea.select();
-                document.execCommand('copy');
-                document.body.removeChild(textArea);
-
-                copyBtn.textContent = '✓ Copied!';
-                copyBtn.classList.add('success');
-                setTimeout(() => {
-                    copyBtn.textContent = 'Copy URL';
-                    copyBtn.classList.remove('success');
-                }, 2000);
-            }
+                alert(`Copy this URL to login as ${userEmail}:\n\n${impersonationUrl}`);
+            });
         }
 
-        // Close modal when clicking outside
-        document.addEventListener('click', function(event) {
-            const modal = document.getElementById('impersonationModal');
-            if (event.target === modal) {
-                closeImpersonationModal();
-            }
-        });
 
         // Order Management Functions
         async function editOrder(orderId) {
@@ -2859,33 +2756,6 @@ Note: This is a simulation. Real orders will trigger actual GoHighLevel API call
     </script>
 
     <!-- Impersonation Modal -->
-    <div id="impersonationModal" class="modal-overlay">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>🔍 Login as User</h2>
-                <p>Open this URL in a new tab/window to impersonate <strong id="modalUserEmail"></strong></p>
-            </div>
-
-            <div class="impersonation-url" id="impersonationUrl">
-                <!-- URL will be inserted here -->
-            </div>
-
-            <div style="background: #e8f4fd; border: 1px solid #bee5eb; border-radius: 4px; padding: 12px; margin: 16px 0; font-size: 14px;">
-                <strong>Instructions:</strong>
-                <ol style="margin: 8px 0 0 20px; padding: 0;">
-                    <li>Copy the URL above</li>
-                    <li>Open a new tab/window in your browser</li>
-                    <li>Paste the URL and press Enter</li>
-                    <li>You'll be logged in as the user for debugging</li>
-                </ol>
-            </div>
-
-            <div class="modal-buttons">
-                <button class="copy-btn" onclick="copyImpersonationUrl()">Copy URL</button>
-                <button class="action-btn btn-secondary" onclick="closeImpersonationModal()">Close</button>
-            </div>
-        </div>
-    </div>
 
 </body>
 </html>
