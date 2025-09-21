@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<!-- Cache Buster v2025.01.21-16:45 - Fixed urlParams declarations -->
+<!-- CACHE BUSTER v2025.01.21-17:30 - CONTINUE BUTTON ADDED -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ACA Lead Order Form - v2025.01.21</title>
+    <title>ACA Lead Order Form - CONTINUE BUTTON v2025.01.21</title>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <style>
         * {
@@ -1167,17 +1167,24 @@
 
         // Initialize order type selection logic
         function initializeOrderTypeLogic() {
+            console.log('=== INITIALIZING ORDER TYPE LOGIC v2025.01.21-17:30 ===');
             const orderTypeRadios = document.querySelectorAll('input[name="orderType"]');
             const continueButtonContainer = document.getElementById('continueButtonContainer');
             const continueButton = document.getElementById('continueButton');
+
+            console.log('Order type radios found:', orderTypeRadios.length);
+            console.log('Continue button container:', continueButtonContainer);
+            console.log('Continue button:', continueButton);
             const individualForm = document.getElementById('individualForm');
             const agencyForm = document.getElementById('agencyForm');
 
             // Handle order type radio button changes
             orderTypeRadios.forEach(radio => {
                 radio.addEventListener('change', function() {
+                    console.log('Order type changed to:', this.value);
                     // Show continue button when any option is selected
                     continueButtonContainer.style.display = 'block';
+                    console.log('Continue button shown');
 
                     // Hide all form sections initially
                     individualForm.classList.remove('active');
