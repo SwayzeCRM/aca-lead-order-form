@@ -1346,7 +1346,7 @@
 
             // Check if user is admin first, before API key requirement
             // Skip admin redirect if we're in impersonation mode
-            const urlParams = new URLSearchParams(window.location.search);
+            // urlParams already declared in initializeAuth function scope
             const isImpersonating = urlParams.get('impersonate') || sessionStorage.getItem('impersonationState');
 
             if (currentUser.role === 'admin' && !isImpersonating) {
