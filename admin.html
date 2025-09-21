@@ -2377,10 +2377,23 @@ Note: This is a simulation. Real orders will trigger actual GoHighLevel API call
             const locationId = document.getElementById('ghlLocationId').value;
 
             console.log('🔍 Debugging Field Mapping API...');
-            showPrivateTokenResult('🔍 Testing field mapping API endpoint...', 'info');
+            showPrivateTokenResult('🔍 Testing API endpoints...', 'info');
 
             try {
-                // Test GET request first
+                // Test simple API endpoint first
+                console.log('Testing simple test API endpoint...');
+                const testResponse = await fetch('/api/test', {
+                    method: 'GET'
+                });
+
+                const testResponseText = await testResponse.text();
+                console.log('Test API Response:', {
+                    status: testResponse.status,
+                    headers: Object.fromEntries(testResponse.headers.entries()),
+                    body: testResponseText
+                });
+
+                // Test GET request to custom fields endpoint
                 console.log('Testing GET request to /api/ghl/get-custom-fields');
                 const getResponse = await fetch('/api/ghl/get-custom-fields', {
                     method: 'GET'
@@ -2418,7 +2431,8 @@ Note: This is a simulation. Real orders will trigger actual GoHighLevel API call
                     body: postResponseText
                 });
 
-                let resultMessage = `GET Status: ${getResponse.status}\nPOST Status: ${postResponse.status}\n\n`;
+                let resultMessage = `Test API Status: ${testResponse.status}\nGET Status: ${getResponse.status}\nPOST Status: ${postResponse.status}\n\n`;
+                resultMessage += `Test API Response: ${testResponseText.substring(0, 100)}...\n\n`;
                 resultMessage += `POST Response Preview: ${postResponseText.substring(0, 300)}...`;
 
                 if (postResponse.ok && postResponseText.trim()) {
