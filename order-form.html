@@ -809,8 +809,24 @@
 
                         <div class="form-group">
                             <label>GoHighLevel Location ID <span class="required">*</span></label>
-                            <input type="text" id="targetLocationId" name="targetLocationId" placeholder="Enter the Location ID for the CRM account">
-                            <div class="help-text">This is the GoHighLevel Location ID where the leads will be delivered</div>
+
+                            <!-- Saved Locations Dropdown -->
+                            <div id="savedLocationsSection" style="display: none; margin-bottom: 12px;">
+                                <select id="savedLocationsDropdown" style="width: 100%; padding: 12px; border: 1px solid #bdc3c7; border-radius: 4px; font-size: 14px; background: white;">
+                                    <option value="">Select a saved location...</option>
+                                </select>
+                                <div style="margin-top: 8px;">
+                                    <button type="button" id="useNewLocationBtn" style="background: #3498db; color: white; padding: 6px 12px; border: none; border-radius: 4px; font-size: 12px; cursor: pointer;">
+                                        + Enter New Location ID
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Manual Location ID Input -->
+                            <div id="manualLocationSection">
+                                <input type="text" id="targetLocationId" name="targetLocationId" placeholder="Enter the Location ID for the CRM account">
+                                <div class="help-text">This is the GoHighLevel Location ID where the leads will be delivered</div>
+                            </div>
                         </div>
 
                         <div style="display: flex; gap: 12px; align-items: center; margin-top: 12px;">
@@ -823,6 +839,9 @@
                         <div id="validatedLocationInfo" style="display: none; margin-top: 16px; padding: 12px; background: #d5f4e6; border-radius: 4px;">
                             <strong>✓ Validated CRM Account:</strong>
                             <div id="locationDetails" style="margin-top: 8px; font-size: 14px;"></div>
+                            <button type="button" id="saveLocationBtn" style="background: #f39c12; color: white; padding: 6px 12px; border: none; border-radius: 4px; font-size: 12px; cursor: pointer; margin-top: 8px;">
+                                💾 Save This Location
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -1141,12 +1160,16 @@
             const purchaseForRadios = document.querySelectorAll('input[name="purchaseFor"]');
             const otherCrmSection = document.getElementById('otherCrmSection');
             const validateLocationBtn = document.getElementById('validateLocationBtn');
+            const saveLocationBtn = document.getElementById('saveLocationBtn');
+            const savedLocationsDropdown = document.getElementById('savedLocationsDropdown');
+            const useNewLocationBtn = document.getElementById('useNewLocationBtn');
 
             // Handle radio button changes
             purchaseForRadios.forEach(radio => {
                 radio.addEventListener('change', function() {
                     if (this.value === 'other') {
                         otherCrmSection.style.display = 'block';
+                        updateSavedLocationsDropdown(); // Load saved locations
                     } else {
                         otherCrmSection.style.display = 'none';
                         validatedLocationInfo = null;
@@ -1155,8 +1178,49 @@
                 });
             });
 
+            // Handle saved location selection
+            savedLocationsDropdown.addEventListener('change', function() {
+                if (this.value) {
+                    document.getElementById('targetLocationId').value = this.value;
+                    const selectedOption = this.options[this.selectedIndex];
+                    const companyName = selectedOption.dataset.companyName;
+
+                    // Show validation info immediately for saved locations
+                    document.getElementById('locationDetails').textContent = companyName;
+                    document.getElementById('validatedLocationInfo').style.display = 'block';
+                    document.getElementById('locationValidationStatus').textContent = '✓ Saved location loaded';
+                    document.getElementById('locationValidationStatus').style.color = '#27ae60';
+
+                    // Hide manual input section
+                    document.getElementById('manualLocationSection').style.display = 'none';
+
+                    // Set validated location info
+                    validatedLocationInfo = {
+                        locationId: this.value,
+                        companyName: companyName
+                    };
+                }
+            });
+
+            // Handle "Enter New Location" button
+            useNewLocationBtn.addEventListener('click', function() {
+                document.getElementById('manualLocationSection').style.display = 'block';
+                document.getElementById('savedLocationsDropdown').value = '';
+                document.getElementById('targetLocationId').value = '';
+                document.getElementById('validatedLocationInfo').style.display = 'none';
+                document.getElementById('locationValidationStatus').textContent = '';
+                validatedLocationInfo = null;
+            });
+
             // Handle location validation
             validateLocationBtn.addEventListener('click', validateLocationId);
+
+            // Handle save location button
+            saveLocationBtn.addEventListener('click', function() {
+                if (validatedLocationInfo) {
+                    showSaveLocationModal(validatedLocationInfo.locationId, validatedLocationInfo.companyName);
+                }
+            });
         }
 
         // Initialize order type selection logic
@@ -2030,6 +2094,121 @@
         function closeConfirmation() {
             window.location.href = 'index.html';
         }
+
+        // Saved Locations Management
+        function loadSavedLocations() {
+            const saved = localStorage.getItem(`savedLocations_${currentUser.id}`);
+            return saved ? JSON.parse(saved) : [];
+        }
+
+        function saveLocationToStorage(locationData) {
+            const savedLocations = loadSavedLocations();
+            savedLocations.push({
+                id: Date.now().toString(),
+                locationId: locationData.locationId,
+                businessName: locationData.businessName,
+                companyName: locationData.companyName,
+                notes: locationData.notes,
+                createdAt: new Date().toISOString()
+            });
+            localStorage.setItem(`savedLocations_${currentUser.id}`, JSON.stringify(savedLocations));
+            updateSavedLocationsDropdown();
+        }
+
+        function updateSavedLocationsDropdown() {
+            const savedLocations = loadSavedLocations();
+            const dropdown = document.getElementById('savedLocationsDropdown');
+            const savedSection = document.getElementById('savedLocationsSection');
+
+            if (savedLocations.length > 0) {
+                // Clear existing options except the first one
+                dropdown.innerHTML = '<option value="">Select a saved location...</option>';
+
+                // Add saved locations
+                savedLocations.forEach(location => {
+                    const option = document.createElement('option');
+                    option.value = location.locationId;
+                    option.textContent = `${location.businessName} (${location.locationId})`;
+                    option.dataset.companyName = location.companyName;
+                    dropdown.appendChild(option);
+                });
+
+                savedSection.style.display = 'block';
+            } else {
+                savedSection.style.display = 'none';
+            }
+        }
+
+        function showSaveLocationModal(locationId, companyName) {
+            document.getElementById('modalLocationId').textContent = locationId;
+            document.getElementById('modalCompanyName').textContent = companyName;
+            document.getElementById('savedBusinessName').value = '';
+            document.getElementById('savedLocationNotes').value = '';
+            document.getElementById('saveLocationModal').style.display = 'flex';
+        }
+
+        function closeSaveLocationModal() {
+            document.getElementById('saveLocationModal').style.display = 'none';
+        }
+
+        function confirmSaveLocation() {
+            const businessName = document.getElementById('savedBusinessName').value.trim();
+            const notes = document.getElementById('savedLocationNotes').value.trim();
+            const locationId = document.getElementById('modalLocationId').textContent;
+            const companyName = document.getElementById('modalCompanyName').textContent;
+
+            if (!businessName) {
+                alert('Please enter a business/client name');
+                return;
+            }
+
+            saveLocationToStorage({
+                locationId: locationId,
+                businessName: businessName,
+                companyName: companyName,
+                notes: notes
+            });
+
+            closeSaveLocationModal();
+            alert(`Location saved as "${businessName}"!`);
+        }
     </script>
+
+    <!-- Save Location Modal -->
+    <div id="saveLocationModal" class="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+        <div class="modal-content" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 8px; max-width: 500px; width: 90%;">
+            <div class="modal-header" style="margin-bottom: 20px;">
+                <h3 style="margin: 0; color: #2c3e50;">💾 Save Location Details</h3>
+                <p style="margin: 8px 0 0 0; color: #7f8c8d; font-size: 14px;">Save this location for quick access in future orders</p>
+            </div>
+
+            <div class="modal-body">
+                <div style="background: #f8f9fa; padding: 12px; border-radius: 4px; margin-bottom: 20px; border-left: 4px solid #27ae60;">
+                    <strong>Location ID:</strong> <span id="modalLocationId"></span><br>
+                    <strong>Company:</strong> <span id="modalCompanyName"></span>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label style="display: block; margin-bottom: 6px; font-weight: 500; color: #34495e;">Business/Client Name <span style="color: #e74c3c;">*</span></label>
+                    <input type="text" id="savedBusinessName" placeholder="Enter a friendly name for this client" style="width: 100%; padding: 12px; border: 1px solid #bdc3c7; border-radius: 4px; font-size: 14px;">
+                    <div style="font-size: 12px; color: #7f8c8d; margin-top: 4px;">This name will appear in your saved locations dropdown</div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 6px; font-weight: 500; color: #34495e;">Notes (Optional)</label>
+                    <textarea id="savedLocationNotes" placeholder="Add any notes about this client..." style="width: 100%; padding: 12px; border: 1px solid #bdc3c7; border-radius: 4px; font-size: 14px; min-height: 80px; resize: vertical;"></textarea>
+                </div>
+            </div>
+
+            <div class="modal-footer" style="display: flex; gap: 12px; justify-content: flex-end;">
+                <button type="button" onclick="closeSaveLocationModal()" style="background: #95a5a6; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer;">
+                    Cancel
+                </button>
+                <button type="button" onclick="confirmSaveLocation()" style="background: #27ae60; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer;">
+                    💾 Save Location
+                </button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
