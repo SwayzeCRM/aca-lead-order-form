@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ACA Lead Order Form</title>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://js.stripe.com/v3/"></script>
     <style>
         * {
             margin: 0;
@@ -769,6 +770,96 @@
         .dropdown::-webkit-scrollbar-thumb:hover {
             background: #94a3b8;
         }
+
+        /* Stripe Checkout Styles */
+        .checkout-section {
+            margin-top: 40px;
+            padding: 30px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 2px solid #e9ecef;
+        }
+
+        .checkout-section h3 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 20px;
+        }
+
+        .order-summary {
+            background: white;
+            padding: 20px;
+            border-radius: 6px;
+            margin-bottom: 24px;
+            border: 1px solid #dee2e6;
+        }
+
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            padding: 4px 0;
+        }
+
+        .summary-row.total {
+            border-top: 2px solid #e9ecef;
+            margin-top: 12px;
+            padding-top: 12px;
+            font-weight: 600;
+            font-size: 18px;
+            color: #2c3e50;
+        }
+
+        .stripe-card-element {
+            background: white;
+            padding: 16px;
+            border: 1px solid #bdc3c7;
+            border-radius: 4px;
+            margin-bottom: 16px;
+        }
+
+        .stripe-card-element.StripeElement--focus {
+            border-color: #2980b9;
+            box-shadow: 0 0 0 2px rgba(41, 128, 185, 0.1);
+        }
+
+        .stripe-card-element.StripeElement--invalid {
+            border-color: #e74c3c;
+        }
+
+        .card-errors {
+            color: #e74c3c;
+            font-size: 14px;
+            margin-top: 8px;
+            min-height: 20px;
+        }
+
+        .checkout-btn {
+            background: #27ae60;
+            color: white;
+            padding: 16px 32px;
+            border: none;
+            border-radius: 6px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: background-color 0.2s ease;
+        }
+
+        .checkout-btn:hover {
+            background: #229954;
+        }
+
+        .checkout-btn:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+        }
+
+        .processing {
+            opacity: 0.7;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
@@ -1042,8 +1133,48 @@
                         <input type="email" name="invoiceEmail" class="common-field">
                     </div>
 
+                    <!-- Checkout Section -->
+                    <div class="checkout-section" id="checkoutSection" style="display: none;">
+                        <h3>💳 Complete Your Order</h3>
+
+                        <div class="order-summary">
+                            <h4 style="margin: 0 0 12px 0; color: #2c3e50;">Order Summary</h4>
+                            <div class="summary-row">
+                                <span>Lead Quantity:</span>
+                                <span id="summaryQuantity">-</span>
+                            </div>
+                            <div class="summary-row">
+                                <span>Price per Lead:</span>
+                                <span id="summaryPricePerLead">$30.00</span>
+                            </div>
+                            <div class="summary-row">
+                                <span>States Selected:</span>
+                                <span id="summaryStates">-</span>
+                            </div>
+                            <div class="summary-row total">
+                                <span>Total Amount:</span>
+                                <span id="summaryTotal">$0.00</span>
+                            </div>
+                        </div>
+
+                        <div class="payment-section">
+                            <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #34495e;">
+                                Card Details <span style="color: #e74c3c;">*</span>
+                            </label>
+                            <div id="card-element" class="stripe-card-element">
+                                <!-- Stripe Elements will create form elements here -->
+                            </div>
+                            <div id="card-errors" class="card-errors" role="alert"></div>
+                        </div>
+
+                        <button id="checkout-btn" class="checkout-btn">
+                            <span id="checkout-btn-text">Complete Payment</span>
+                            <span id="checkout-btn-amount"></span>
+                        </button>
+                    </div>
+
                     <div class="submit-section">
-                        <button type="submit" class="submit-btn">Submit Lead Order</button>
+                        <button type="button" id="reviewOrderBtn" class="submit-btn">Review Order & Checkout</button>
                     </div>
                 </div>
             </form>
@@ -1150,6 +1281,10 @@
             await loadFormData();
             initializePurchasingForLogic();
             initializeOrderTypeLogic();
+            initializeStripe();
+
+            // Wire up review order button
+            document.getElementById('reviewOrderBtn').addEventListener('click', showCheckoutSection);
         });
 
         // Impersonation Management Functions
@@ -2093,6 +2228,229 @@
 
         function closeConfirmation() {
             window.location.href = 'index.html';
+        }
+
+        // Stripe Integration
+        let stripe;
+        let elements;
+        let cardElement;
+        let currentOrderTotal = 0;
+
+        // Initialize Stripe (you'll need to replace with your publishable key)
+        function initializeStripe() {
+            // TODO: Replace with your actual Stripe publishable key
+            stripe = Stripe('pk_test_YOUR_PUBLISHABLE_KEY_HERE'); // Replace this!
+            elements = stripe.elements();
+
+            // Create card element
+            cardElement = elements.create('card', {
+                style: {
+                    base: {
+                        fontSize: '16px',
+                        color: '#424770',
+                        '::placeholder': {
+                            color: '#aab7c4',
+                        },
+                    },
+                    invalid: {
+                        color: '#9e2146',
+                    },
+                },
+            });
+
+            cardElement.mount('#card-element');
+
+            // Handle real-time validation errors from the card Element
+            cardElement.on('change', function(event) {
+                const displayError = document.getElementById('card-errors');
+                if (event.error) {
+                    displayError.textContent = event.error.message;
+                } else {
+                    displayError.textContent = '';
+                }
+            });
+
+            // Handle checkout button click
+            document.getElementById('checkout-btn').addEventListener('click', handleCheckout);
+        }
+
+        function calculateOrderTotal() {
+            const quantitySelect = document.querySelector('select[name="leadQuantity"]');
+            if (!quantitySelect.value) return 0;
+
+            const quantity = parseInt(quantitySelect.value);
+            const pricePerLead = 30; // $30 per lead
+            return quantity * pricePerLead;
+        }
+
+        function updateOrderSummary() {
+            const quantitySelect = document.querySelector('select[name="leadQuantity"]');
+            const selectedStates = document.querySelectorAll('#selectedStates .selected-item');
+
+            const quantity = quantitySelect.value ? parseInt(quantitySelect.value) : 0;
+            const total = calculateOrderTotal();
+            currentOrderTotal = total;
+
+            document.getElementById('summaryQuantity').textContent = quantity ? `${quantity} leads` : '-';
+            document.getElementById('summaryStates').textContent = selectedStates.length ? `${selectedStates.length} states` : '-';
+            document.getElementById('summaryTotal').textContent = `$${total.toLocaleString()}.00`;
+            document.getElementById('checkout-btn-amount').textContent = `($${total.toLocaleString()})`;
+
+            // Enable/disable checkout button based on total
+            const checkoutBtn = document.getElementById('checkout-btn');
+            checkoutBtn.disabled = total === 0;
+        }
+
+        function showCheckoutSection() {
+            // Validate required fields first
+            const requiredFields = document.querySelectorAll('.common-field[required], input[required], select[required]');
+            let hasErrors = false;
+
+            requiredFields.forEach(field => {
+                if (!field.value.trim()) {
+                    hasErrors = true;
+                    field.style.borderColor = '#e74c3c';
+                } else {
+                    field.style.borderColor = '#bdc3c7';
+                }
+            });
+
+            // Check if states are selected
+            const selectedStates = document.querySelectorAll('#selectedStates .selected-item');
+            if (selectedStates.length < 5) {
+                hasErrors = true;
+                document.getElementById('stateSearch').style.borderColor = '#e74c3c';
+                alert('Please select at least 5 states');
+                return;
+            }
+
+            if (hasErrors) {
+                alert('Please fill in all required fields');
+                return;
+            }
+
+            updateOrderSummary();
+            document.getElementById('checkoutSection').style.display = 'block';
+            document.querySelector('.submit-section').style.display = 'none';
+
+            // Scroll to checkout section
+            document.getElementById('checkoutSection').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        async function handleCheckout() {
+            const checkoutBtn = document.getElementById('checkout-btn');
+            const btnText = document.getElementById('checkout-btn-text');
+
+            // Disable button and show loading
+            checkoutBtn.disabled = true;
+            btnText.textContent = 'Processing...';
+
+            try {
+                // Create payment intent on your server
+                const response = await fetch('/api/create-payment-intent', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        amount: currentOrderTotal * 100, // Convert to cents
+                        currency: 'usd',
+                        orderData: collectOrderData()
+                    }),
+                });
+
+                const { clientSecret, error } = await response.json();
+
+                if (error) {
+                    throw new Error(error);
+                }
+
+                // Confirm payment with Stripe
+                const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
+                    payment_method: {
+                        card: cardElement,
+                        billing_details: {
+                            name: document.querySelector('input[name="individual_firstName"]')?.value + ' ' +
+                                  document.querySelector('input[name="individual_lastName"]')?.value ||
+                                  document.querySelector('input[name="agency_contactName"]')?.value,
+                            email: document.querySelector('input[name="invoiceEmail"]').value,
+                        },
+                    }
+                });
+
+                if (stripeError) {
+                    throw new Error(stripeError.message);
+                }
+
+                // Payment succeeded
+                if (paymentIntent.status === 'succeeded') {
+                    // Submit the order
+                    await submitOrderWithPayment(paymentIntent.id);
+                }
+
+            } catch (error) {
+                console.error('Payment error:', error);
+                document.getElementById('card-errors').textContent = error.message;
+
+                // Re-enable button
+                checkoutBtn.disabled = false;
+                btnText.textContent = 'Complete Payment';
+            }
+        }
+
+        function collectOrderData() {
+            // Collect all form data for the order
+            const formData = new FormData(document.getElementById('leadOrderForm'));
+            const orderData = {};
+
+            for (let [key, value] of formData.entries()) {
+                orderData[key] = value;
+            }
+
+            // Add selected states and carriers
+            const selectedStates = Array.from(document.querySelectorAll('#selectedStates .selected-item'))
+                .map(item => item.textContent.replace('×', '').trim());
+            const selectedCarriers = Array.from(document.querySelectorAll('#selectedCarriers .selected-item'))
+                .map(item => item.textContent.replace('×', '').trim());
+
+            orderData.selectedStates = selectedStates;
+            orderData.selectedCarriers = selectedCarriers;
+            orderData.totalAmount = currentOrderTotal;
+
+            return orderData;
+        }
+
+        async function submitOrderWithPayment(paymentIntentId) {
+            try {
+                const orderData = collectOrderData();
+                orderData.paymentIntentId = paymentIntentId;
+                orderData.paymentStatus = 'paid';
+                orderData.userId = currentUser.id; // Add current user ID
+
+                // Submit to your backend
+                const response = await fetch('/api/submit-order', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+                    },
+                    body: JSON.stringify(orderData),
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    // Show success message with order ID
+                    alert(`Payment successful! Your order has been submitted.\n\nOrder ID: ${result.orderId}`);
+                    window.location.href = 'index.html'; // Redirect to dashboard
+                } else {
+                    throw new Error(result.error || 'Failed to submit order');
+                }
+
+            } catch (error) {
+                console.error('Order submission error:', error);
+                alert('Payment was successful, but there was an error submitting your order. Please contact support with your payment confirmation.');
+            }
         }
 
         // Saved Locations Management

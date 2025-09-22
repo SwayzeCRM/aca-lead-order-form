@@ -8,7 +8,10 @@
     "build": "echo 'Static site - no build needed'",
     "deploy": "vercel --prod"
   },
-  "dependencies": {},
+  "dependencies": {
+    "stripe": "^12.0.0",
+    "@supabase/supabase-js": "^2.0.0"
+  },
   "devDependencies": {
     "vercel": "^32.0.0"
   },
