@@ -840,13 +840,6 @@
                         </div>
                     </div>
 
-                    <!-- Continue Button - Always visible, enabled after selection -->
-                    <div id="continueButtonContainer" style="margin-top: 32px; text-align: center; padding: 20px; background: #f8f9fa; border-radius: 8px; border: 2px solid #e9ecef;">
-                        <p id="continueInstructions" style="margin: 0 0 16px 0; color: #6c757d; font-size: 14px;">Please select an order type above, then click continue</p>
-                        <button type="button" id="continueButton" style="background: #2980b9; color: white; padding: 16px 40px; border: none; border-radius: 6px; font-size: 18px; font-weight: 600; cursor: pointer; opacity: 0.5;" disabled>
-                            Continue to Form →
-                        </button>
-                    </div>
                 </div>
 
                 <!-- Individual NPN Form -->
@@ -1168,58 +1161,43 @@
 
         // Initialize order type selection logic
         function initializeOrderTypeLogic() {
-            console.log('=== INITIALIZING ORDER TYPE LOGIC v2025.01.21-17:30 ===');
+            console.log('=== INITIALIZING ORDER TYPE LOGIC - AUTO SHOW ===');
             const orderTypeRadios = document.querySelectorAll('input[name="orderType"]');
-            const continueButtonContainer = document.getElementById('continueButtonContainer');
-            const continueButton = document.getElementById('continueButton');
-
-            console.log('Order type radios found:', orderTypeRadios.length);
-            console.log('Continue button container:', continueButtonContainer);
-            console.log('Continue button:', continueButton);
             const individualForm = document.getElementById('individualForm');
             const agencyForm = document.getElementById('agencyForm');
+            const commonFields = document.getElementById('commonFields');
 
-            // Handle order type radio button changes
+            console.log('Order type radios found:', orderTypeRadios.length);
+            console.log('Individual form:', individualForm);
+            console.log('Agency form:', agencyForm);
+
+            // Handle order type radio button changes - auto show forms
             orderTypeRadios.forEach(radio => {
                 radio.addEventListener('change', function() {
                     console.log('Order type changed to:', this.value);
-                    // Enable continue button when any option is selected
-                    continueButton.disabled = false;
-                    continueButton.style.opacity = '1';
-                    continueButton.style.cursor = 'pointer';
-                    document.getElementById('continueInstructions').textContent = 'Click continue to proceed to the form';
-                    console.log('Continue button enabled');
 
-                    // Hide all form sections initially
-                    individualForm.classList.remove('active');
-                    agencyForm.classList.remove('active');
+                    // Show the appropriate form section immediately
+                    if (this.value === 'individual') {
+                        individualForm.classList.add('active');
+                        agencyForm.classList.remove('active');
+                        console.log('Showing individual form');
+                    } else if (this.value === 'agency') {
+                        agencyForm.classList.add('active');
+                        individualForm.classList.remove('active');
+                        console.log('Showing agency form');
+                    }
+
+                    // Always show common fields when any option is selected
+                    if (commonFields) {
+                        commonFields.classList.add('active');
+                    }
+
+                    // Smooth scroll to the form section
+                    setTimeout(() => {
+                        const activeForm = this.value === 'individual' ? individualForm : agencyForm;
+                        activeForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 100);
                 });
-            });
-
-            // Handle continue button click
-            continueButton.addEventListener('click', function() {
-                const selectedOrderType = document.querySelector('input[name="orderType"]:checked');
-
-                if (!selectedOrderType) {
-                    alert('Please select an order type first.');
-                    return;
-                }
-
-                // Show the appropriate form section
-                if (selectedOrderType.value === 'individual') {
-                    individualForm.classList.add('active');
-                    agencyForm.classList.remove('active');
-                } else if (selectedOrderType.value === 'agency') {
-                    agencyForm.classList.add('active');
-                    individualForm.classList.remove('active');
-                }
-
-                // Scroll to the form section
-                const activeForm = selectedOrderType.value === 'individual' ? individualForm : agencyForm;
-                activeForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-                // Hide the continue button container after clicking
-                continueButtonContainer.style.display = 'none';
             });
         }
 
