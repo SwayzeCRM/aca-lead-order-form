@@ -840,30 +840,6 @@
                         </div>
                     </div>
 
-                    <!-- EMERGENCY ALWAYS VISIBLE BUTTON - NO JAVASCRIPT NEEDED -->
-                    <div style="margin: 40px 0; text-align: center; padding: 30px; background: #ff6b6b; color: white; border-radius: 10px; border: 5px solid #ff5252;">
-                        <h2 style="margin: 0 0 15px 0; font-size: 24px;">🚨 EMERGENCY CONTINUE BUTTON 🚨</h2>
-                        <p style="margin: 0 0 20px 0; font-size: 16px;">Select Individual or Agency above, then click this button!</p>
-                        <button type="button" onclick="
-                            var selected = document.querySelector('input[name=orderType]:checked');
-                            if (!selected) { alert('Please select Individual NPN or Agency NPN first!'); return; }
-                            var indForm = document.getElementById('individualForm');
-                            var agForm = document.getElementById('agencyForm');
-                            if (selected.value === 'individual') {
-                                indForm.style.display = 'block';
-                                agForm.style.display = 'none';
-                                indForm.scrollIntoView();
-                            } else {
-                                agForm.style.display = 'block';
-                                indForm.style.display = 'none';
-                                agForm.scrollIntoView();
-                            }
-                            this.parentElement.style.display = 'none';
-                        " style="background: #ffffff; color: #ff6b6b; padding: 20px 50px; border: 3px solid #ff6b6b; border-radius: 8px; font-size: 20px; font-weight: bold; cursor: pointer;">
-                            CONTINUE TO FORM →
-                        </button>
-                    </div>
-
                     <!-- Continue Button - Always visible, enabled after selection -->
                     <div id="continueButtonContainer" style="margin-top: 32px; text-align: center; padding: 20px; background: #f8f9fa; border-radius: 8px; border: 2px solid #e9ecef;">
                         <p id="continueInstructions" style="margin: 0 0 16px 0; color: #6c757d; font-size: 14px;">Please select an order type above, then click continue</p>
